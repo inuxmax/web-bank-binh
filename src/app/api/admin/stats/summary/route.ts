@@ -53,8 +53,15 @@ function inRange(ts: unknown, fromTs: number, toTs: number) {
 }
 
 function num(v: unknown) {
-  const n = Number(String(v ?? '').replace(/[^\d.-]/g, ''));
-  return Number.isFinite(n) ? n : 0;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  const raw = String(v ?? '').trim();
+  if (!raw) return 0;
+  const isNegative = raw.includes('-');
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return 0;
+  const n = Number(digits);
+  if (!Number.isFinite(n)) return 0;
+  return isNegative ? -n : n;
 }
 
 export async function GET(req: Request) {
@@ -78,15 +85,26 @@ export async function GET(req: Request) {
     });
     const { fromTs, toTs } = getRange(parsed.preset, parsed.from, parsed.to);
 
-    const [va, wd, users] = await Promise.all([db.loadAll(), db.loadWithdrawals(), db.getAllUsers()]);
+    const [va, wd, users, userBalanceHistory] = await Promise.all([
+      db.loadAll(),
+      db.loadWithdrawals(),
+      db.getAllUsers(),
+      db.loadUserBalanceHistory(),
+    ]);
 
     const primaryVa = va.filter((r) => !String((r as { parentRequestId?: string }).parentRequestId || '').trim());
     const totalVaCreated = primaryVa.filter((r) => inRange((r as { createdAt?: number }).createdAt, fromTs, toTs)).length;
 
-    const totalTransactionAmount = va
-      .filter((r) => String((r as { status?: string }).status || '') === 'paid')
-      .filter((r) => inRange((r as { timePaid?: number; createdAt?: number }).timePaid || (r as { createdAt?: number }).createdAt, fromTs, toTs))
-      .reduce((sum, r) => sum + num((r as { amount?: number }).amount), 0);
+    const totalTransactionAmount = (userBalanceHistory as Record<string, unknown>[])
+      .filter((h) => {
+        const reason = String(h.reason || '').toLowerCase();
+        return reason === 'ipn' || reason === 'va_paid';
+      })
+      .filter((h) => inRange(h.ts, fromTs, toTs))
+      .reduce((sum, h) => {
+        const delta = num(h.delta);
+        return delta > 0 ? sum + delta : sum;
+      }, 0);
 
     const totalIbftAmount = wd
       .filter((w) => String((w as { status?: string }).status || '') === 'done')
