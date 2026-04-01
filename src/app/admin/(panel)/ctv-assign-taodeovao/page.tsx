@@ -10,9 +10,9 @@ function isAllowedOperator(userId: string | undefined) {
 
 export default async function AdminAssignCtvTaodeovaoPage() {
   const session = await getSession();
-  if (!session.userId || !session.isAdmin) redirect('/admin/login');
-  if (!isAllowedOperator(session.userId)) redirect('/admin');
-  if (session.userId !== 'admin') {
+  if (!session.userId) redirect('/admin/login');
+  if (!isAllowedOperator(session.userId) && !session.isAdmin) redirect('/admin/login');
+  if (!isAllowedOperator(session.userId) && session.userId !== 'admin') {
     const perms = await getSessionAdminPermissions(session);
     if (!hasAdminPermission(perms, 'ctv')) redirect('/admin');
   }

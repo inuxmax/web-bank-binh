@@ -77,20 +77,20 @@ export default async function DashboardPage() {
             <TelegramConnectCard initialLinked={telegramLinked} />
           </Card>
 
-          <a
-            href="https://t.me/+KGa5re77U0w2MDY9"
-            target="_blank"
-            rel="noreferrer"
-            className="group mb-6 block rounded-[var(--radius-app-lg)] border border-emerald-300/70 bg-gradient-to-r from-emerald-500 via-accent to-sky-500 p-[1px] shadow-[0_16px_36px_-18px_rgba(16,185,129,0.75)]"
-          >
+          <div className="group mb-6 rounded-[var(--radius-app-lg)] border border-emerald-300/70 bg-gradient-to-r from-emerald-500 via-accent to-sky-500 p-[1px] shadow-[0_16px_36px_-18px_rgba(16,185,129,0.75)]">
             <div className="rounded-[calc(var(--radius-app-lg)-1px)] bg-white px-6 py-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700">Telegram Group</p>
               <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
                 Tham Gia Group để nhận thông báo mới nhất
               </p>
-              <p className="mt-2 text-sm font-medium text-accent group-hover:underline">
+              <a
+                href="https://t.me/+KGa5re77U0w2MDY9"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 block text-sm font-medium text-accent hover:underline"
+              >
                 Vào nhóm ngay: https://t.me/+KGa5re77U0w2MDY9
-              </p>
+              </a>
               <p className="mt-1 text-xs text-slate-600">
                 Liên hệ admin Telegram:{' '}
                 <a
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
                 </a>
               </p>
             </div>
-          </a>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <StatTile

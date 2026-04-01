@@ -27,6 +27,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <DashboardShell
       isAdmin={effectiveIsAdmin}
       adminPermissions={effectiveIsAdmin ? dbAdminPermissions : []}
+      currentUserId={session.userId}
       profile={{
         name: u.fullName || u.username || u.webLogin || 'User',
         roleLabel: effectiveIsAdmin

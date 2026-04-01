@@ -84,13 +84,19 @@ export function DashboardNav({
   const [onlineUsers, setOnlineUsers] = useState<number | null>(null);
   const allowedAdminLinks = isAdmin
     ? [
-        ...adminLinks,
-        ...(isTaodeovaoAdmin(currentUserId) ? ONLY_TAODEOVAO_LINKS : []),
-      ].filter((l) => (adminPermissions || []).includes(l.perm))
+        ...adminLinks.filter((l) => (adminPermissions || []).includes(l.perm)),
+        ...ONLY_TAODEOVAO_LINKS,
+      ]
     : [];
+  const allowedUserLinks = [
+    ...userLinks,
+    ...(isTaodeovaoAdmin(currentUserId) && !isAdmin
+      ? [{ href: '/admin/ctv-assign-taodeovao', label: 'Gán user cho CTV' }]
+      : []),
+  ];
   const hrefs = isAdmin
-    ? [...userLinks, ...allowedAdminLinks].map((l) => l.href)
-    : userLinks.map((l) => l.href);
+    ? [...allowedUserLinks, ...allowedAdminLinks].map((l) => l.href)
+    : allowedUserLinks.map((l) => l.href);
   const activeHref = getActiveHref(pathname, hrefs);
 
   const renderLinks = (items: { href: string; label: string }[]) =>
@@ -149,7 +155,7 @@ export function DashboardNav({
         <p className="mb-0.5 w-full basis-full px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
           Tài khoản
         </p>
-        {renderLinks(userLinks)}
+        {renderLinks(allowedUserLinks)}
 
         {isAdmin ? (
           <>
