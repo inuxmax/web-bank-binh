@@ -98,6 +98,8 @@ const IbftHistorySchema = new Schema(
   {
     ts: { type: Number, index: true },
     adminId: String,
+    userId: String,
+    username: String,
     merchant: String,
     bankCode: String,
     accountNumber: String,

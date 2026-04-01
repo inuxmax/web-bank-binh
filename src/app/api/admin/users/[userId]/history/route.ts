@@ -56,10 +56,19 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
       updatedAt: Number(w.updatedAt) || 0,
     }));
 
+  const transactions = (await db.getUserBalanceHistory(uid, 300)).map((x) => ({
+    ts: Number(x.ts) || 0,
+    delta: Number(x.delta) || 0,
+    balanceAfter: Number(x.balanceAfter) || 0,
+    reason: x.reason != null ? String(x.reason) : '',
+    ref: x.ref != null ? String(x.ref) : '',
+  }));
+
   return NextResponse.json({
     userId: uid,
     createdVACount: Number(u.createdVA) || 0,
     vaRecords: vaItems,
     withdrawals,
+    transactions,
   });
 }

@@ -7,6 +7,8 @@ import { IBFT_BANKS } from '@/lib/banks';
 type WithdrawalItem = {
   id?: string;
   mongoId?: string;
+  userId?: string;
+  username?: string;
   bankCode?: string;
   bankName?: string;
   bankAccount?: string;
@@ -19,6 +21,8 @@ type WithdrawalItem = {
 
 type IbftHistoryItem = {
   ts?: number;
+  userId?: string;
+  username?: string;
   bankCode?: string;
   accountNumber?: string;
   accountName?: string;
@@ -228,7 +232,9 @@ export default function AdminIbftPage() {
             </div>
             {selectedWithdrawal ? (
               <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                Đang liên kết lệnh rút #{String(selectedWithdrawal.id || selectedWithdrawal.mongoId || '—')} — chi hộ thành công sẽ tự duyệt.
+                Đang liên kết lệnh rút #{String(selectedWithdrawal.id || selectedWithdrawal.mongoId || '—')} · User:{' '}
+                {String(selectedWithdrawal.username || '—')} ({String(selectedWithdrawal.userId || '—')}) — chi hộ
+                thành công sẽ tự duyệt.
               </p>
             ) : null}
             <Button type="submit" disabled={loading}>
@@ -287,6 +293,9 @@ export default function AdminIbftPage() {
                     </p>
                     <p className="mt-1 text-xs text-slate-600">
                       {String(w.bankAccount || 'N/A')} · {String(w.bankHolder || 'N/A')}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      User: {String(w.username || '—')} · ID: {String(w.userId || '—')}
                     </p>
                     <p className="mt-2 text-xs">
                       <span className="font-semibold text-rose-600">
@@ -349,6 +358,9 @@ export default function AdminIbftPage() {
                   </div>
                   <p className="mt-2 text-sm font-semibold text-slate-800">
                     {String(it.bankCode || 'N/A')} • {String(it.accountNumber || 'N/A')} ({String(it.accountName || 'N/A')})
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    User: {String(it.username || '—')} · ID: {String(it.userId || '—')}
                   </p>
                   <p className="mt-1 text-sm text-slate-600">
                     Số tiền: <span className="font-semibold text-accent">{Number(it.amount || 0).toLocaleString('vi-VN')}đ</span>

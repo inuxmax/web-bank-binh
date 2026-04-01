@@ -45,6 +45,13 @@ type HistoryPayload = {
     createdAt: number;
     updatedAt: number;
   }[];
+  transactions: {
+    ts: number;
+    delta: number;
+    balanceAfter: number;
+    reason: string;
+    ref: string;
+  }[];
 };
 
 function fmtTs(ts: number) {
@@ -54,6 +61,20 @@ function fmtTs(ts: number) {
   } catch {
     return '—';
   }
+}
+
+function reasonLabel(reason: string) {
+  const r = String(reason || '').toLowerCase();
+  if (r === 'admin_add') return 'Admin cộng tiền';
+  if (r === 'withdraw_create') return 'Tạo lệnh rút';
+  if (r === 'withdraw_done') return 'Rút thành công';
+  if (r === 'withdraw_reject') return 'Từ chối rút';
+  if (r === 'withdraw_reject_wrong') return 'Từ chối sai thông tin';
+  if (r === 'withdraw_refund') return 'Hoàn tiền lệnh rút';
+  if (r === 'withdraw_refund_reason') return 'Hoàn tiền có lý do';
+  if (r.startsWith('withdraw_reject_note:')) return `Lý do từ chối: ${reason.slice('withdraw_reject_note:'.length)}`;
+  if (r === 'va_paid') return 'Tiền về từ VA';
+  return reason || '—';
 }
 
 export default function AdminUsersPage() {
@@ -252,7 +273,7 @@ export default function AdminUsersPage() {
       <PageHeader
         eyebrow="Admin"
         title="Người dùng"
-        description="Kích hoạt tài khoản, khóa (ban) user, cộng tiền nội bộ, phí và giới hạn VA. Xem lịch sử tạo VA và rút tiền."
+        description="Kích hoạt tài khoản, khóa (ban) user, cộng tiền nội bộ, phí và giới hạn VA. Xem lịch sử giao dịch, tạo VA và rút tiền."
       />
 
       {historyUser ? (
@@ -299,6 +320,47 @@ export default function AdminUsersPage() {
                     <p className="rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 py-2 font-mono text-base font-semibold text-slate-900">
                       {historyData.createdVACount.toLocaleString('vi-VN')}
                     </p>
+                  </section>
+
+                  <section>
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Giao dịch số dư
+                    </h3>
+                    {historyData.transactions.length === 0 ? (
+                      <p className="text-slate-500">Chưa có giao dịch số dư.</p>
+                    ) : (
+                      <div className="overflow-x-auto rounded-lg border border-slate-200/90">
+                        <table className="w-full min-w-[760px] text-left text-xs">
+                          <thead className="bg-surface-2/80 text-[10px] uppercase tracking-wide text-slate-500">
+                            <tr>
+                              <th className="p-2">Thời gian</th>
+                              <th className="p-2">Biến động</th>
+                              <th className="p-2">Số dư sau</th>
+                              <th className="p-2">Nội dung</th>
+                              <th className="p-2">Ref</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyData.transactions.map((t, idx) => (
+                              <tr key={`${t.ts}-${t.ref}-${idx}`} className="border-t border-slate-100">
+                                <td className="p-2 whitespace-nowrap text-slate-600">{fmtTs(t.ts)}</td>
+                                <td
+                                  className={`p-2 whitespace-nowrap font-semibold tabular-nums ${
+                                    t.delta > 0 ? 'text-emerald-700' : t.delta < 0 ? 'text-rose-700' : 'text-slate-600'
+                                  }`}
+                                >
+                                  {t.delta > 0 ? '+' : ''}
+                                  {t.delta.toLocaleString('vi-VN')} đ
+                                </td>
+                                <td className="p-2 whitespace-nowrap tabular-nums">{t.balanceAfter.toLocaleString('vi-VN')} đ</td>
+                                <td className="p-2">{reasonLabel(t.reason)}</td>
+                                <td className="p-2 font-mono text-[11px]">{t.ref || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </section>
 
                   <section>

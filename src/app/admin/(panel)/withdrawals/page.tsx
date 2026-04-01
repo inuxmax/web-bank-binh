@@ -114,6 +114,9 @@ export default function AdminWithdrawalsPage() {
             <p className="mt-2 text-slate-400">
               {String(w.bankName)} · {String(w.bankAccount)} · {String(w.bankHolder)}
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              User: {String(w.username || '—')} · ID: {String(w.userId || '—')}
+            </p>
             <p className="mt-1">
               Số tiền: {Number(w.amount || 0).toLocaleString('vi-VN')}đ · Thực nhận:{' '}
               {Number(w.actualReceive || 0).toLocaleString('vi-VN')}đ

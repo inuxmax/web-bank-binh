@@ -283,6 +283,8 @@ export async function addIbftHistory(entry: Record<string, unknown>): Promise<Re
   const row = {
     ts: Number(entry.ts) || Date.now(),
     adminId: entry.adminId ? String(entry.adminId) : '',
+    userId: entry.userId ? String(entry.userId) : '',
+    username: entry.username ? String(entry.username) : '',
     merchant: entry.merchant ? String(entry.merchant) : '',
     bankCode: entry.bankCode ? String(entry.bankCode) : '',
     accountNumber: entry.accountNumber ? String(entry.accountNumber) : '',

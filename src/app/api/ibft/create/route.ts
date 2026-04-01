@@ -109,6 +109,17 @@ async function autoHandleLinkedWithdrawal(params: {
   return { updated: true, reason: 'updated_reject' as const, id: wid || wm, status: 'reject' as const };
 }
 
+async function findLinkedWithdrawal(params: { id?: string; mongoId?: string }) {
+  const idNorm = String(params.id || '').trim();
+  const mongoNorm = String(params.mongoId || '').trim();
+  let w =
+    (idNorm ? await db.getWithdrawalById(idNorm) : null) ||
+    (idNorm ? await db.getWithdrawalById(`WD${idNorm}`) : null) ||
+    (idNorm ? await db.getWithdrawalById(String(idNorm).replace(/^WD/i, '')) : null);
+  if (!w && mongoNorm) w = await db.getWithdrawalByMongoId(mongoNorm);
+  return w;
+}
+
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session.userId || !session.isAdmin) {
@@ -167,8 +178,14 @@ export async function POST(req: Request) {
       ...ov,
     });
 
+    const linkedWithdrawal = await findLinkedWithdrawal({
+      id: parsed.withdrawalId,
+      mongoId: parsed.withdrawalMongoId,
+    });
     await db.addIbftHistory({
       adminId: session.userId,
+      userId: String(linkedWithdrawal?.userId || ''),
+      username: String(linkedWithdrawal?.username || ''),
       bankCode: parsed.bankCode,
       accountNumber: parsed.accountNumber,
       accountName: accountNameNormalized || parsed.accountName,
