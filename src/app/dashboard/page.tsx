@@ -55,7 +55,7 @@ export default async function DashboardPage() {
         description={
           isAdmin
             ? 'Chế độ quản trị: quản lý người dùng, rút tiền, số dư Sinpay và chi hộ IBFT từ menu bên trái.'
-            : 'Số dư nội bộ sau phí IPN; Virtual Account MSB / KLB / BIDV qua Open API (OAuth + RSA).'
+            : 'Tổng Quan Chi phí phí rút, phí giao dịch, phí chuyển, phí hoa hồng CTV, phí hoa hồng Referral, phí hoa hồng Admin.'
         }
       />
 
@@ -69,7 +69,7 @@ export default async function DashboardPage() {
                   {balance.toLocaleString('vi-VN')} đ
                 </span>
               }
-              hint="Đồng bộ từ IPN và các lệnh rút / hoàn."
+              hint="Đồng bộ từ Virtual Account và các lệnh rút / hoàn."
               action={<ArrowLink href="/dashboard/withdraw">Rút tiền</ArrowLink>}
             />
             <StatTile
@@ -163,17 +163,6 @@ export default async function DashboardPage() {
                     Danh sách VA
                     <span className="text-accent">→</span>
                   </Link>
-                </li>
-                <li>
-                  <a
-                    href="https://developers.hpay.com.vn/introduction"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-between rounded-[var(--radius-app)] border border-transparent px-1 py-2 text-slate-600 transition hover:border-slate-200 hover:bg-white hover:text-slate-900"
-                  >
-                    Tài liệu Sinpay
-                    <span className="text-slate-500">↗</span>
-                  </a>
                 </li>
               </ul>
             </Card>
