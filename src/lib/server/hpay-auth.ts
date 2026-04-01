@@ -8,6 +8,12 @@ let cache: { token: string; expiresAt: number; scope: string; clientId: string; 
   mid: '',
 };
 
+function getHttpTimeoutMs() {
+  const raw = Number(process.env.HPAY_HTTP_TIMEOUT_MS || '');
+  if (!Number.isFinite(raw) || raw < 5000) return 60000;
+  return Math.min(180000, Math.floor(raw));
+}
+
 function isValid() {
   return cache.token && Date.now() < cache.expiresAt - 30000;
 }
@@ -16,7 +22,7 @@ export async function getAccessToken(
   scope = 'va',
   { clientId, clientSecret, mid }: { clientId?: string; clientSecret?: string; mid?: string } = {},
 ) {
-  const resolvedBaseUrl = process.env.HPAY_BASE_URL || 'https://openapi-sandbox.htpgroup.com.vn';
+  const resolvedBaseUrl = process.env.HPAY_BASE_URL || 'https://openapi.htpgroup.com.vn';
   const resolvedClientId = (clientId || process.env.HPAY_CLIENT_ID || '').trim();
   const resolvedClientSecret = (clientSecret || process.env.HPAY_CLIENT_SECRET || '').trim();
   const resolvedMid = (mid || process.env.HPAY_X_API_MID || '').trim();
@@ -49,7 +55,7 @@ export async function getAccessToken(
     method: 'POST',
     headers,
     body: params.toString(),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(getHttpTimeoutMs()),
   });
 
   if (!res.ok) {

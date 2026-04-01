@@ -29,7 +29,7 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, string> = {
   balance: 'Số dư Sinpay',
   ibft: 'Chi hộ',
   ibft_history: 'Lịch sử chi hộ',
-  settings: 'Cấu hình phí',
+  settings: 'Cấu hình',
   permissions: 'Phân quyền admin',
 };
 

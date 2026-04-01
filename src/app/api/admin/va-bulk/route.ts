@@ -34,6 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
   }
+  const ownerId = String(session.userId);
 
   try {
     const body = await req.json();
@@ -46,46 +47,56 @@ export async function POST(req: Request) {
       Array.isArray(data.names) && data.names.length
         ? data.names.map((n) => String(n || '').trim()).filter(Boolean)
         : [];
+    const concurrencyRaw = Number(process.env.VA_BULK_CONCURRENCY || 4);
+    const concurrency = Math.max(1, Math.min(10, Number.isFinite(concurrencyRaw) ? Math.floor(concurrencyRaw) : 4));
 
-    const items: Record<string, unknown>[] = [];
+    const items: Record<string, unknown>[] = Array.from({ length: quantity }, () => ({}));
     let success = 0;
     let failed = 0;
-    for (let i = 0; i < quantity; i += 1) {
-      const name = names[i] || buildName(randomNames, baseName, i);
-      const result = await createVirtualAccountForOwner(session.userId, name, {
-        bankCode: bankCode || undefined,
-        isAdminContext: true,
-      });
-      if (!result.ok) {
-        failed += 1;
-        items.push({
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(concurrency, quantity) }, async () => {
+      while (true) {
+        const i = cursor;
+        cursor += 1;
+        if (i >= quantity) break;
+        const name = names[i] ?? buildName(randomNames, baseName, i);
+        const result = await createVirtualAccountForOwner(ownerId, name, {
+          bankCode: bankCode || undefined,
+          isAdminContext: true,
+        });
+        if (!result.ok) {
+          failed += 1;
+          items[i] = {
+            index: i + 1,
+            inputName: name,
+            ok: false,
+            error: result.error,
+          };
+          continue;
+        }
+        success += 1;
+        items[i] = {
           index: i + 1,
           inputName: name,
-          ok: false,
-          error: result.error,
-        });
-        continue;
+          ok: true,
+          requestId: result.requestId,
+          vaAccount: String(result.decoded?.vaAccount || ''),
+          vaBank: String(result.decoded?.vaBank || ''),
+          vaName: String(result.decoded?.vaName || ''),
+          vaAmount: String(result.decoded?.vaAmount || ''),
+          quickLink: String(result.decoded?.quickLink || ''),
+          remark: String(result.decoded?.remark || ''),
+        };
       }
-      success += 1;
-      items.push({
-        index: i + 1,
-        inputName: name,
-        ok: true,
-        requestId: result.requestId,
-        vaAccount: String(result.decoded?.vaAccount || ''),
-        vaBank: String(result.decoded?.vaBank || ''),
-        vaName: String(result.decoded?.vaName || ''),
-        vaAmount: String(result.decoded?.vaAmount || ''),
-        quickLink: String(result.decoded?.quickLink || ''),
-        remark: String(result.decoded?.remark || ''),
-      });
-    }
+    });
+    await Promise.all(workers);
 
     return NextResponse.json({
       ok: true,
       success,
       failed,
       total: quantity,
+      concurrency,
       items,
     });
   } catch (e) {

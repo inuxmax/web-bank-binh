@@ -64,10 +64,15 @@ export async function createVirtualAccountForOwner(
       if (!subject.isActive) {
         return { ok: false, error: 'Tài khoản chưa được duyệt', status: 403 };
       }
-      if (subject.vaLimit !== null && subject.createdVA >= subject.vaLimit) {
+      const cfg = await db.getConfig();
+      const globalVaLimitRaw = Number((cfg as { globalVaLimit?: number | null }).globalVaLimit);
+      const globalVaLimit = Number.isFinite(globalVaLimitRaw) && globalVaLimitRaw > 0 ? globalVaLimitRaw : null;
+      const effectiveVaLimit =
+        subject.vaLimit !== null && subject.vaLimit !== undefined ? Number(subject.vaLimit) : globalVaLimit;
+      if (effectiveVaLimit !== null && Number(subject.createdVA) >= Number(effectiveVaLimit)) {
         return {
           ok: false,
-          error: `Đã đạt giới hạn tạo VA (${subject.vaLimit})`,
+          error: `Đã đạt giới hạn tạo VA (${effectiveVaLimit})`,
           status: 400,
         };
       }

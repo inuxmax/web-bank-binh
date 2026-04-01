@@ -9,6 +9,14 @@ type CtvMe = {
   shareCode: string;
   shareLink: string;
   referralUsers: number;
+  referredUsers: {
+    id: string;
+    username: string;
+    fullName: string;
+    isActive: boolean;
+    registerAt: number;
+    paidVaCount: number;
+  }[];
   paidCount: number;
   commissionTotal: number;
   commissionCount: number;
@@ -171,6 +179,52 @@ export default function DashboardCtvPage() {
                 Tỷ lệ hoa hồng hiện tại: <span className="font-semibold">{Number(data.ratePercent || 0)}%</span>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1 p-4">
+            <p className="text-sm font-medium text-slate-700">Danh sách user đã giới thiệu</p>
+            {!data.referredUsers || data.referredUsers.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-500">Chưa có user nào đăng ký qua mã giới thiệu của bạn.</p>
+            ) : (
+              <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200/90">
+                <table className="w-full min-w-[760px] text-left text-xs">
+                  <thead className="bg-surface-2/80 text-[10px] uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="p-2">User</th>
+                      <th className="p-2">Họ tên</th>
+                      <th className="p-2">ID</th>
+                      <th className="p-2">Trạng thái</th>
+                      <th className="p-2">Đăng ký</th>
+                      <th className="p-2">Lượt VA đã thanh toán</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.referredUsers.map((u) => (
+                      <tr key={u.id} className="border-t border-slate-100">
+                        <td className="p-2 font-medium text-slate-800">{u.username || '—'}</td>
+                        <td className="p-2">{u.fullName || '—'}</td>
+                        <td className="p-2 font-mono text-[11px] text-slate-600">{u.id}</td>
+                        <td className="p-2">
+                          {u.isActive ? (
+                            <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                              Đã duyệt
+                            </span>
+                          ) : (
+                            <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                              Chờ duyệt
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-2 whitespace-nowrap text-slate-600">{fmtTs(u.registerAt)}</td>
+                        <td className="p-2 font-semibold text-slate-800">
+                          {Number(u.paidVaCount || 0).toLocaleString('vi-VN')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <div className="rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1 p-4">

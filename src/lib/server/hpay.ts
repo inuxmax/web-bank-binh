@@ -11,6 +11,12 @@ function getNodeCrypto(): typeof import('crypto') {
   return getRuntimeRequire()('crypto') as typeof import('crypto');
 }
 
+function getHttpTimeoutMs() {
+  const raw = Number(process.env.HPAY_HTTP_TIMEOUT_MS || '');
+  if (!Number.isFinite(raw) || raw < 5000) return 60000;
+  return Math.min(180000, Math.floor(raw));
+}
+
 function readPrivateKeyFromFile(keyFile: string): string | null {
   try {
     const fs = getRuntimeRequire()('fs');
@@ -96,7 +102,7 @@ export async function createVirtualAccount(params: {
   clientSecretOverride?: string;
   xApiMidOverride?: string;
 }) {
-  const baseUrl = process.env.HPAY_BASE_URL || 'https://openapi-sandbox.htpgroup.com.vn';
+  const baseUrl = process.env.HPAY_BASE_URL || 'https://openapi.htpgroup.com.vn';
   const url = `${baseUrl}/service/va/v1/create`;
   const merchantId = params.merchantIdOverride || process.env.HPAY_MERCHANT_ID || '';
   const passcode = params.passcodeOverride || process.env.HPAY_PASSCODE || '';
@@ -147,7 +153,7 @@ export async function createVirtualAccount(params: {
     method: 'POST',
     headers,
     body: JSON.stringify({ data, signature }),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(getHttpTimeoutMs()),
   });
 
   const resData = (await res.json()) as {
@@ -177,7 +183,7 @@ export async function getAccountBalance(opts?: {
   clientSecretOverride?: string;
   xApiMidOverride?: string;
 }) {
-  const baseUrl = process.env.HPAY_BASE_URL || 'https://openapi-sandbox.htpgroup.com.vn';
+  const baseUrl = process.env.HPAY_BASE_URL || 'https://openapi.htpgroup.com.vn';
   const url = `${baseUrl}/service/account/v1/get-balance`;
   const merchantId = opts?.merchantIdOverride || process.env.HPAY_MERCHANT_ID || '';
   const passcode = opts?.passcodeOverride || process.env.HPAY_PASSCODE || '';
@@ -212,7 +218,7 @@ export async function getAccountBalance(opts?: {
     method: 'POST',
     headers,
     body: JSON.stringify({ data, signature }),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(getHttpTimeoutMs()),
   });
 
   const resData = (await res.json()) as { data?: string; errorCode?: string; errorMessage?: string };
@@ -244,7 +250,7 @@ export async function createIBFT(params: {
   clientSecretOverride?: string;
   xApiMidOverride?: string;
 }) {
-  const baseUrl = process.env.HPAY_BASE_URL || 'https://openapi-sandbox.htpgroup.com.vn';
+  const baseUrl = process.env.HPAY_BASE_URL || 'https://openapi.htpgroup.com.vn';
   const path = process.env.HPAY_IBFT_PATH || '/service/firm/v1/transfer';
   const url = `${baseUrl}${path}`;
   const merchantId = params.merchantIdOverride || process.env.HPAY_MERCHANT_ID || '';
@@ -283,7 +289,7 @@ export async function createIBFT(params: {
     method: 'POST',
     headers,
     body: JSON.stringify({ data, signature }),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(getHttpTimeoutMs()),
   });
 
   const resData = (await res.json()) as { data?: string; errorCode?: string; errorMessage?: string };
@@ -305,7 +311,7 @@ export async function createIBFT(params: {
 }
 
 export async function getIBFTStatus(params: { requestId?: string; orderId?: string }) {
-  const baseUrl = process.env.HPAY_BASE_URL || 'https://openapi-sandbox.htpgroup.com.vn';
+  const baseUrl = process.env.HPAY_BASE_URL || 'https://openapi.htpgroup.com.vn';
   const ibftPath = process.env.HPAY_IBFT_STATUS_PATH || '/service/firm/v1/get-status';
   const url = `${baseUrl}${ibftPath}`;
   const merchantId = process.env.HPAY_MERCHANT_ID || '';
@@ -330,7 +336,7 @@ export async function getIBFTStatus(params: { requestId?: string; orderId?: stri
     method: 'POST',
     headers,
     body: JSON.stringify({ data, signature }),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(getHttpTimeoutMs()),
   });
   const resData = (await res.json()) as { data?: string };
   let decoded: Record<string, unknown> | null = null;

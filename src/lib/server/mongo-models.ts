@@ -62,6 +62,7 @@ const AppConfigSchema = new Schema(
     ipnFeeFlat: { type: Number, default: 4000 },
     withdrawFeeFlat: { type: Number, default: 4000 },
     ctvCommissionPercent: { type: Number, default: 1 },
+    globalVaLimit: { type: Schema.Types.Mixed, default: null },
   },
   { collection: 'app_config' },
 );

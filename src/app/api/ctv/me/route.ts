@@ -44,6 +44,19 @@ export async function GET(req: Request) {
   const referralMap = new Map(myReferrals.map((u) => [u.id, u]));
   const referralIds = new Set(myReferrals.map((u) => u.id));
   const allVa = await db.loadAll();
+  const referralUserList = myReferrals.map((u) => {
+    const paidVaCount = allVa.filter(
+      (r) => String(r.status || '') === 'paid' && String(r.userId || '') === u.id,
+    ).length;
+    return {
+      id: u.id,
+      username: u.webLogin || u.username || '—',
+      fullName: u.fullName || '',
+      isActive: Boolean(u.isActive),
+      registerAt: Number(u.registerAt || 0),
+      paidVaCount,
+    };
+  });
   const paidCount = allVa.filter(
     (r) => String(r.status || '') === 'paid' && referralIds.has(String(r.userId || '')),
   ).length;
@@ -90,6 +103,7 @@ export async function GET(req: Request) {
     shareCode,
     shareLink,
     referralUsers: myReferrals.length,
+    referredUsers: referralUserList,
     paidCount,
     commissionTotal: Number(me.ctvCommissionTotal || 0),
     commissionCount: Number(me.ctvCommissionCount || 0),

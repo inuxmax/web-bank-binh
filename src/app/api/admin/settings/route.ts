@@ -26,6 +26,7 @@ const patchSchema = z.object({
   ctvCommissionPercent: z.number().min(0).max(100),
   ipnFeeFlat: z.number().min(0),
   withdrawFeeFlat: z.number().min(0),
+  globalVaLimit: z.number().int().min(1).max(100000).nullable(),
 });
 
 export async function PATCH(req: Request) {
@@ -47,6 +48,7 @@ export async function PATCH(req: Request) {
       ctvCommissionPercent: data.ctvCommissionPercent,
       ipnFeeFlat: data.ipnFeeFlat,
       withdrawFeeFlat: data.withdrawFeeFlat,
+      globalVaLimit: data.globalVaLimit,
     });
     return NextResponse.json({ ok: true, config });
   } catch (e) {

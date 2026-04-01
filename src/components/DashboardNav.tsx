@@ -23,7 +23,7 @@ const adminLinks: { href: string; label: string; perm: string }[] = [
   { href: '/admin/balance', label: 'Số dư Sinpay', perm: 'balance' },
   { href: '/admin/ibft', label: 'Chi hộ', perm: 'ibft' },
   { href: '/admin/ibft/history', label: 'Lịch sử chi hộ', perm: 'ibft_history' },
-  { href: '/admin/settings', label: 'Cấu hình phí', perm: 'settings' },
+  { href: '/admin/settings', label: 'Cấu hình', perm: 'settings' },
   { href: '/admin/permissions', label: 'Phân quyền', perm: 'permissions' },
 ];
 

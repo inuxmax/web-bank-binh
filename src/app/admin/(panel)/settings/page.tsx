@@ -8,6 +8,7 @@ export default function AdminSettingsPage() {
   const [ipnFeeFlat, setIpnFeeFlat] = useState('4000');
   const [withdrawFeeFlat, setWithdrawFeeFlat] = useState('4000');
   const [ctvCommissionPercent, setCtvCommissionPercent] = useState('1');
+  const [globalVaLimit, setGlobalVaLimit] = useState('');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
@@ -20,6 +21,7 @@ export default function AdminSettingsPage() {
         if (cfg.ipnFeeFlat !== undefined) setIpnFeeFlat(String(cfg.ipnFeeFlat));
         if (cfg.withdrawFeeFlat !== undefined) setWithdrawFeeFlat(String(cfg.withdrawFeeFlat));
         if (cfg.ctvCommissionPercent !== undefined) setCtvCommissionPercent(String(cfg.ctvCommissionPercent));
+        setGlobalVaLimit(cfg.globalVaLimit == null ? '' : String(cfg.globalVaLimit));
       })
       .catch(() => {
         /* keep defaults */
@@ -30,13 +32,25 @@ export default function AdminSettingsPage() {
     e.preventDefault();
     setMsg('');
     setErr('');
+    const parsedGlobalVaLimit = globalVaLimit.trim() === '' ? null : Number(globalVaLimit);
     const payload = {
       globalFeePercent: Number(globalFeePercent),
       ctvCommissionPercent: Number(ctvCommissionPercent),
       ipnFeeFlat: Number(ipnFeeFlat),
       withdrawFeeFlat: Number(withdrawFeeFlat),
+      globalVaLimit: parsedGlobalVaLimit,
     };
-    const hasInvalid = Object.values(payload).some((n) => !Number.isFinite(n) || n < 0);
+    const hasInvalid =
+      !Number.isFinite(payload.globalFeePercent) ||
+      payload.globalFeePercent < 0 ||
+      !Number.isFinite(payload.ctvCommissionPercent) ||
+      payload.ctvCommissionPercent < 0 ||
+      !Number.isFinite(payload.ipnFeeFlat) ||
+      payload.ipnFeeFlat < 0 ||
+      !Number.isFinite(payload.withdrawFeeFlat) ||
+      payload.withdrawFeeFlat < 0 ||
+      (payload.globalVaLimit !== null &&
+        (!Number.isFinite(payload.globalVaLimit) || payload.globalVaLimit < 1));
     if (hasInvalid) {
       setErr('Giá trị nhập không hợp lệ.');
       return;
@@ -56,6 +70,7 @@ export default function AdminSettingsPage() {
     if (cfg.ctvCommissionPercent !== undefined) setCtvCommissionPercent(String(cfg.ctvCommissionPercent));
     if (cfg.ipnFeeFlat !== undefined) setIpnFeeFlat(String(cfg.ipnFeeFlat));
     if (cfg.withdrawFeeFlat !== undefined) setWithdrawFeeFlat(String(cfg.withdrawFeeFlat));
+    setGlobalVaLimit(cfg.globalVaLimit == null ? '' : String(cfg.globalVaLimit));
     setMsg('Đã lưu cấu hình chung.');
   }
 
@@ -63,10 +78,20 @@ export default function AdminSettingsPage() {
     <div>
       <PageHeader
         eyebrow="Admin"
-        title="Cấu hình phí"
-        description="Áp dụng toàn hệ thống (trừ khi override từng user trong DB)."
+        title="Cấu hình"
+        description="Áp dụng toàn hệ thống (trừ khi override theo từng user)."
       />
       <form onSubmit={save} className="mt-2 max-w-md space-y-5">
+        <div>
+          <FieldLabel>Giới hạn tạo VA cho tất cả user</FieldLabel>
+          <input
+            type="number"
+            value={globalVaLimit}
+            onChange={(e) => setGlobalVaLimit(e.target.value)}
+            className={fieldInputClass}
+            placeholder="Để trống = không giới hạn"
+          />
+        </div>
         <div>
           <FieldLabel>Phí rút % (globalFeePercent)</FieldLabel>
           <input

@@ -32,7 +32,7 @@ export default async function AdminHomePage() {
     { href: '/admin/balance', perm: 'balance', t: 'Số dư Sinpay', d: 'API get-balance + lịch sử snapshot' },
     { href: '/admin/ibft', perm: 'ibft', t: 'Chi hộ IBFT', d: 'FirmBanking transfer + tra trạng thái' },
     { href: '/admin/ibft/history', perm: 'ibft_history', t: 'Lịch sử chi hộ', d: 'Xem log chi hộ gần đây' },
-    { href: '/admin/settings', perm: 'settings', t: 'Cấu hình phí', d: 'Global fee và % hoa hồng CTV' },
+    { href: '/admin/settings', perm: 'settings', t: 'Cấu hình', d: 'Phí chung, % hoa hồng CTV, giới hạn VA toàn hệ thống' },
     { href: '/admin/permissions', perm: 'permissions', t: 'Phân quyền', d: 'Cấp quyền admin theo module' },
   ];
   const visibleCards = cards.filter((c) => permissions.includes(c.perm));

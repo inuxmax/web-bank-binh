@@ -242,11 +242,24 @@ export async function getConfig(): Promise<Record<string, unknown>> {
       ipnFeeFlat: 4000,
       withdrawFeeFlat: 4000,
       ctvCommissionPercent: 1,
+      globalVaLimit: null,
     });
-    return { globalFeePercent: 0, ipnFeeFlat: 4000, withdrawFeeFlat: 4000, ctvCommissionPercent: 1 };
+    return {
+      globalFeePercent: 0,
+      ipnFeeFlat: 4000,
+      withdrawFeeFlat: 4000,
+      ctvCommissionPercent: 1,
+      globalVaLimit: null,
+    };
   }
   const { _id, __v, ...rest } = doc as Record<string, unknown>;
-  const defaults = { globalFeePercent: 0, ipnFeeFlat: 4000, withdrawFeeFlat: 4000, ctvCommissionPercent: 1 };
+  const defaults = {
+    globalFeePercent: 0,
+    ipnFeeFlat: 4000,
+    withdrawFeeFlat: 4000,
+    ctvCommissionPercent: 1,
+    globalVaLimit: null,
+  };
   return { ...defaults, ...rest };
 }
 
