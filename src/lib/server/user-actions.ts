@@ -90,7 +90,16 @@ export async function createVirtualAccountForOwner(
     }
 
     const safeName = name.trim().replace(/\s+/g, ' ').slice(0, 50);
-    const apiName = safeName;
+    const apiName = safeName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Za-z0-9 ]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 50);
+    if (!apiName || apiName.length < 2) {
+      return { ok: false, error: 'Tên VA không hợp lệ. Vui lòng nhập tên không dấu.', status: 400 };
+    }
 
     const requestId = `${Date.now().toString().slice(-10)}${Math.floor(100000 + Math.random() * 900000)}`.slice(
       0,

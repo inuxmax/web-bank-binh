@@ -59,7 +59,7 @@ export default function NewVaPage() {
         <PageHeader
           eyebrow="Sinpay API"
           title="Tạo Virtual Account"
-        description="Tên hiển thị gửi theo đúng nội dung bạn nhập."
+        description="Tên sẽ được tự động chuẩn hóa sang không dấu trước khi gửi API."
         />
 
         <div className="grid gap-8 lg:grid-cols-5">
