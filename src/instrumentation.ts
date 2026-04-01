@@ -6,6 +6,15 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'edge') {
     return;
   }
+  const pollEnabled = String(process.env.HPAY_UNPAID_POLLING_ENABLED || 'true').trim().toLowerCase() !== 'false';
+  if (pollEnabled) {
+    try {
+      const { startVaSyncPoller } = await import('@/lib/server/va-sync-poller');
+      startVaSyncPoller();
+    } catch (e) {
+      console.error('[instrumentation] VA sync poller:', e);
+    }
+  }
   if (!process.env.TELEGRAM_BOT_TOKEN?.trim()) {
     return;
   }
