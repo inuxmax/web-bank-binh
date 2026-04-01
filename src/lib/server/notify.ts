@@ -4,7 +4,30 @@ import * as db from '@/lib/server/db';
 import { normalizeAdminPermissions } from './admin-permissions';
 
 function fmtVnd(n: unknown) {
-  return `${(Number(n) || 0).toLocaleString('vi-VN')}đ`;
+  return `${(Number(n) || 0).toLocaleString('vi-VN')} đ`;
+}
+
+function fmtTimeVN(input: unknown) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const num = Number(raw);
+  const ms = Number.isFinite(num) ? (raw.length >= 13 ? num : num * 1000) : NaN;
+  const d = Number.isFinite(ms) ? new Date(ms) : new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  const time = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(d);
+  const date = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d);
+  return `${time}, ${date}`;
 }
 
 function collectAdminChatIds(users: Awaited<ReturnType<typeof db.getAllUsers>>) {
@@ -112,18 +135,55 @@ export function buildWithdrawCreatedText(data: {
 }) {
   return [
     '✅ Yêu cầu rút tiền đã được tạo',
-    `ID: ${data.id}`,
     '',
     `💵 Số tiền rút: ${fmtVnd(data.amount)}`,
-    `💸 Phí chuyển: ${fmtVnd(data.feeFlat)}`,
-    `📩 Phí rút: ${fmtVnd(data.feeByPercent)}`,
-    `💰 Thực nhận: ${fmtVnd(data.actualReceive)}`,
     `🏦 Ngân hàng: ${data.bankName}`,
     `💳 STK: ${data.bankAccount}`,
     `👤 Chủ TK: ${data.bankHolder}`,
     `💰 Số dư còn lại: ${fmtVnd(data.balanceAfter)}`,
     '',
-    '⏳ Đang chờ admin xử lý...',
+    '⏳ Đang chờ duyệt..',
+  ].join('\n');
+}
+
+export function buildVaPaidText(data: {
+  vaAccount?: string;
+  bankName?: string;
+  ownerName?: string;
+  amount?: number;
+  credited?: number;
+  feeFlat?: number;
+  requestId?: string;
+  transactionId?: string;
+  timePaid?: string;
+}) {
+  return [
+    '🔔 TIỀN VỀ TIỀN VỀ',
+    `💵 Số tiền: ${fmtVnd(data.amount)}`,
+    `✅ Thực nhận: +${fmtVnd(data.credited)} (đã trừ ${fmtVnd(data.feeFlat)} phí giao dịch)`,
+    data.bankName ? `🏦 ${data.bankName}` : '',
+    data.ownerName ? ` • Họ Tên: ${data.ownerName}` : '',
+    data.vaAccount ? ` • Số TK: ${data.vaAccount}` : '',
+    data.timePaid ? ` • Thời Gian: ${fmtTimeVN(data.timePaid)}` : '',
+    data.transactionId ? ` • Transaction: ${data.transactionId}` : '',
+    data.requestId ? ` • RequestId: ${data.requestId}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+export function buildWithdrawDoneText(data: {
+  amount: number;
+  feeFlat: number;
+  actualReceive: number;
+}) {
+  return [
+    '✅ Rút tiền thành công!',
+    '',
+    `💵 Số tiền rút: ${fmtVnd(data.amount)}`,
+    `💸 Phí chuyển: ${fmtVnd(data.feeFlat)}`,
+    `💰 Thực nhận: ${fmtVnd(data.actualReceive)}`,
+    '🏦 Đã chuyển vào tài khoản ngân hàng của bạn.',
   ].join('\n');
 }
 

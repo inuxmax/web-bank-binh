@@ -5,7 +5,7 @@ import { getIbftBankLabel } from '@/lib/banks';
 import { createIBFT, hpaySignatureHint } from '@/lib/server/hpay';
 import * as db from '@/lib/server/db';
 import { getSessionAdminPermissions, hasAdminPermission } from '@/lib/server/admin-permissions';
-import { notifyUserTelegramByUserId } from '@/lib/server/notify';
+import { buildWithdrawDoneText, notifyUserTelegramByUserId } from '@/lib/server/notify';
 
 export const runtime = 'nodejs';
 
@@ -54,13 +54,11 @@ async function autoHandleLinkedWithdrawal(params: {
         reason: 'withdraw_done',
         ref: wid || wm,
       });
-      const msg = [
-        '✅ Lệnh rút tiền đã được duyệt',
-        `Mã: ${wid || wm || '—'}`,
-        `Ngân hàng: ${String(w.bankName || '—')}`,
-        `Số tiền: ${Number(w.amount || 0).toLocaleString('vi-VN')}đ`,
-        `Thực nhận: ${Number(w.actualReceive || 0).toLocaleString('vi-VN')}đ`,
-      ].join('\n');
+      const msg = buildWithdrawDoneText({
+        amount: Number(w.amount || 0),
+        feeFlat: Number(w.feeFlat || 0),
+        actualReceive: Number(w.actualReceive || 0),
+      });
       await notifyUserTelegramByUserId(userId, msg);
     }
     return { updated: true, reason: 'updated_done' as const, id: wid || wm, status: 'done' as const };

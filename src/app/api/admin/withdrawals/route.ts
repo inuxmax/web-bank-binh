@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getSession } from '@/lib/get-session';
 import * as db from '@/lib/server/db';
 import { getSessionAdminPermissions, hasAdminPermission } from '@/lib/server/admin-permissions';
-import { notifyUserTelegramByUserId } from '@/lib/server/notify';
+import { buildWithdrawDoneText, notifyUserTelegramByUserId } from '@/lib/server/notify';
 
 export const runtime = 'nodejs';
 
@@ -85,11 +85,11 @@ export async function PATCH(req: Request) {
             ref: wid || wm,
           });
           const msg = [
-            '✅ Lệnh rút tiền đã được duyệt',
-            `Mã: ${wid || wm || '—'}`,
-            `Ngân hàng: ${String(w.bankName || '—')}`,
-            `Số tiền: ${fmtVnd(w.amount)}`,
-            `Thực nhận: ${fmtVnd(w.actualReceive)}`,
+            buildWithdrawDoneText({
+              amount: Number(w.amount) || 0,
+              feeFlat: Number(w.feeFlat) || 0,
+              actualReceive: Number(w.actualReceive) || 0,
+            }),
           ].join('\n');
           await notifyUserTelegramByUserId(userId, msg);
         }

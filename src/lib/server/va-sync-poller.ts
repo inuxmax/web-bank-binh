@@ -2,6 +2,7 @@ import 'server-only';
 
 import * as db from '@/lib/server/db';
 import { getBankOverrides, getTransactionDetail, inquireVirtualAccount } from './hpay';
+import { buildVaPaidText, notifyUserTelegramByUserId } from './notify';
 
 const POLLER_KEY = '__sinpayVaSyncPollerStarted' as const;
 const POLLER_STATUS_KEY = '__sinpayVaSyncPollerStatus' as const;
@@ -123,6 +124,22 @@ async function markPaidByDetail(rec: Record<string, unknown>, detail: Record<str
     timePaid: pick(detail, ['timePaid', 'paidAt', 'transactionTime']) || String(Date.now()),
     createdAt: Number(rec.createdAt || Date.now()),
   });
+  try {
+    const text = buildVaPaidText({
+      vaAccount: String(rec.vaAccount || ''),
+      bankName: String(rec.vaBank || ''),
+      ownerName: String(rec.name || rec.vaName || '').trim(),
+      amount: gross,
+      credited,
+      feeFlat,
+      requestId: String(rec.requestId || ''),
+      transactionId: txId || cashinId,
+      timePaid: pick(detail, ['timePaid', 'paidAt', 'transactionTime']) || String(Date.now()),
+    });
+    await notifyUserTelegramByUserId(userId, text);
+  } catch {
+    // ignore telegram notify error
+  }
   return true;
 }
 

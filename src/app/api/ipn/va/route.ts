@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import * as db from '@/lib/server/db';
+import { buildVaPaidText, notifyUserTelegramByUserId } from '@/lib/server/notify';
 
 export const runtime = 'nodejs';
 
@@ -247,6 +248,22 @@ async function handleIpn(req: Request) {
               });
             }
           }
+        }
+        try {
+          const text = buildVaPaidText({
+            vaAccount,
+            bankName: bank,
+            ownerName: String((rec as { name?: string; vaName?: string }).name || (rec as { vaName?: string }).vaName || '').trim(),
+            amount: gross,
+            credited,
+            feeFlat,
+            requestId: requestIdToStore,
+            transactionId: transactionId || cashinId,
+            timePaid: timePaid || String(Date.now()),
+          });
+          await notifyUserTelegramByUserId(uid, text);
+        } catch {
+          // ignore telegram notify error
         }
       }
       await db.upsert({
