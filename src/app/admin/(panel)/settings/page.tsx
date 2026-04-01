@@ -9,6 +9,7 @@ export default function AdminSettingsPage() {
   const [withdrawFeeFlat, setWithdrawFeeFlat] = useState('4000');
   const [ctvCommissionPercent, setCtvCommissionPercent] = useState('1');
   const [globalVaLimit, setGlobalVaLimit] = useState('');
+  const [autoApproveNewUsers, setAutoApproveNewUsers] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
@@ -22,6 +23,7 @@ export default function AdminSettingsPage() {
         if (cfg.withdrawFeeFlat !== undefined) setWithdrawFeeFlat(String(cfg.withdrawFeeFlat));
         if (cfg.ctvCommissionPercent !== undefined) setCtvCommissionPercent(String(cfg.ctvCommissionPercent));
         setGlobalVaLimit(cfg.globalVaLimit == null ? '' : String(cfg.globalVaLimit));
+        setAutoApproveNewUsers(Boolean(cfg.autoApproveNewUsers));
       })
       .catch(() => {
         /* keep defaults */
@@ -39,6 +41,7 @@ export default function AdminSettingsPage() {
       ipnFeeFlat: Number(ipnFeeFlat),
       withdrawFeeFlat: Number(withdrawFeeFlat),
       globalVaLimit: parsedGlobalVaLimit,
+      autoApproveNewUsers,
     };
     const hasInvalid =
       !Number.isFinite(payload.globalFeePercent) ||
@@ -71,6 +74,7 @@ export default function AdminSettingsPage() {
     if (cfg.ipnFeeFlat !== undefined) setIpnFeeFlat(String(cfg.ipnFeeFlat));
     if (cfg.withdrawFeeFlat !== undefined) setWithdrawFeeFlat(String(cfg.withdrawFeeFlat));
     setGlobalVaLimit(cfg.globalVaLimit == null ? '' : String(cfg.globalVaLimit));
+    setAutoApproveNewUsers(Boolean(cfg.autoApproveNewUsers));
     setMsg('Đã lưu cấu hình chung.');
   }
 
@@ -82,6 +86,21 @@ export default function AdminSettingsPage() {
         description="Áp dụng toàn hệ thống (trừ khi override theo từng user)."
       />
       <form onSubmit={save} className="mt-2 max-w-md space-y-5">
+        <div>
+          <FieldLabel>Duyệt user tự động</FieldLabel>
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={autoApproveNewUsers}
+              onChange={(e) => setAutoApproveNewUsers(e.target.checked)}
+            />
+            <span>
+              {autoApproveNewUsers
+                ? 'ON - user đăng ký mới được tự động kích hoạt'
+                : 'OFF - user đăng ký mới phải chờ admin kích hoạt'}
+            </span>
+          </label>
+        </div>
         <div>
           <FieldLabel>Giới hạn tạo VA cho tất cả user</FieldLabel>
           <input

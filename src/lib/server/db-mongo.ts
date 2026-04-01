@@ -243,6 +243,7 @@ export async function getConfig(): Promise<Record<string, unknown>> {
       withdrawFeeFlat: 4000,
       ctvCommissionPercent: 1,
       globalVaLimit: null,
+      autoApproveNewUsers: false,
     });
     return {
       globalFeePercent: 0,
@@ -250,6 +251,7 @@ export async function getConfig(): Promise<Record<string, unknown>> {
       withdrawFeeFlat: 4000,
       ctvCommissionPercent: 1,
       globalVaLimit: null,
+      autoApproveNewUsers: false,
     };
   }
   const { _id, __v, ...rest } = doc as Record<string, unknown>;
@@ -259,6 +261,7 @@ export async function getConfig(): Promise<Record<string, unknown>> {
     withdrawFeeFlat: 4000,
     ctvCommissionPercent: 1,
     globalVaLimit: null,
+    autoApproveNewUsers: false,
   };
   return { ...defaults, ...rest };
 }

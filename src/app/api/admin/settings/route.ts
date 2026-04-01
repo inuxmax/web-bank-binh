@@ -27,6 +27,7 @@ const patchSchema = z.object({
   ipnFeeFlat: z.number().min(0),
   withdrawFeeFlat: z.number().min(0),
   globalVaLimit: z.number().int().min(1).max(100000).nullable(),
+  autoApproveNewUsers: z.boolean(),
 });
 
 export async function PATCH(req: Request) {
@@ -49,6 +50,7 @@ export async function PATCH(req: Request) {
       ipnFeeFlat: data.ipnFeeFlat,
       withdrawFeeFlat: data.withdrawFeeFlat,
       globalVaLimit: data.globalVaLimit,
+      autoApproveNewUsers: data.autoApproveNewUsers,
     });
     return NextResponse.json({ ok: true, config });
   } catch (e) {

@@ -54,6 +54,8 @@ export async function POST(req: Request) {
     const clientIp = getClientIp(req);
     const normalizedPhone = normalizePhone(phone);
     const normalizedEmail = String(email || '').trim().toLowerCase();
+    const cfg = await db.getConfig();
+    const autoApproveNewUsers = Boolean((cfg as { autoApproveNewUsers?: boolean }).autoApproveNewUsers);
     const defaultReferralCode = String(process.env.DEFAULT_CTV_CODE || '').trim().toUpperCase();
     const normalizedReferral = String(referralCode || '').trim().toUpperCase();
     const effectiveReferralCode = normalizedReferral || defaultReferralCode || '';
@@ -91,7 +93,7 @@ export async function POST(req: Request) {
       fullName: fullName.trim(),
       phone: normalizedPhone,
       email: normalizedEmail,
-      isActive: false,
+      isActive: autoApproveNewUsers,
       registerIp: clientIp,
       registerAt: now,
       lastLoginIp: clientIp,
@@ -113,6 +115,8 @@ export async function POST(req: Request) {
         `User: ${username.trim()}`,
         `User ID: ${id}`,
         `SĐT: ${normalizedPhone}`,
+        `Email: ${normalizedEmail}`,
+        `Kích hoạt tự động: ${autoApproveNewUsers ? 'ON (đã active)' : 'OFF (chờ duyệt)'}`,
         `IP: ${clientIp || '—'}`,
         `Thời gian: ${new Date(now).toLocaleString('vi-VN')}`,
       ].join('\n'),
