@@ -232,7 +232,7 @@ export default function AdminVaBulkPage() {
             <thead className="border-b border-slate-200 bg-surface-2/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="p-3">STT</th>
-                <th className="p-3">Tên</th>
+                <th className="p-3">Tên thực tế</th>
                 <th className="p-3">STK VA</th>
                 <th className="p-3">Ngân hàng</th>
                 <th className="p-3">RequestId</th>
@@ -244,7 +244,10 @@ export default function AdminVaBulkPage() {
               {rows.map((r, i) => (
                 <tr key={`${r.requestId || r.inputName}-${i}`} className="border-b border-slate-100 hover:bg-slate-50/80">
                   <td className="p-3">{r.index}</td>
-                  <td className="p-3">{r.inputName}</td>
+                  <td className="p-3">
+                    <p className="font-medium text-slate-800">{r.vaName || '—'}</p>
+                    <p className="text-[11px] text-slate-500">Tên nhập: {r.inputName}</p>
+                  </td>
                   <td className="p-3 font-mono text-xs text-accent">{r.vaAccount || '—'}</td>
                   <td className="p-3">{r.vaBank || '—'}</td>
                   <td className="p-3 font-mono text-xs">{r.requestId || '—'}</td>

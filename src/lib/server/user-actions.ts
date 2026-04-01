@@ -89,13 +89,8 @@ export async function createVirtualAccountForOwner(
       };
     }
 
-    const safeName = name.trim().slice(0, 50);
-    const apiName = safeName
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^\w\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const safeName = name.trim().replace(/\s+/g, ' ').slice(0, 50);
+    const apiName = safeName;
 
     const requestId = `${Date.now().toString().slice(-10)}${Math.floor(100000 + Math.random() * 900000)}`.slice(
       0,

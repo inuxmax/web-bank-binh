@@ -47,6 +47,12 @@ export async function POST(req: Request) {
       Array.isArray(data.names) && data.names.length
         ? data.names.map((n) => String(n || '').trim()).filter(Boolean)
         : [];
+    if (names.length > 0 && names.length !== quantity) {
+      return NextResponse.json(
+        { error: `Danh sách tên phải đúng ${quantity} dòng (hiện tại ${names.length}).` },
+        { status: 400 },
+      );
+    }
     const concurrencyRaw = Number(process.env.VA_BULK_CONCURRENCY || 4);
     const concurrency = Math.max(1, Math.min(10, Number.isFinite(concurrencyRaw) ? Math.floor(concurrencyRaw) : 4));
 
@@ -59,7 +65,7 @@ export async function POST(req: Request) {
         const i = cursor;
         cursor += 1;
         if (i >= quantity) break;
-        const name = names[i] ?? buildName(randomNames, baseName, i);
+        const name = names.length ? names[i]! : buildName(randomNames, baseName, i);
         const result = await createVirtualAccountForOwner(ownerId, name, {
           bankCode: bankCode || undefined,
           isAdminContext: true,
