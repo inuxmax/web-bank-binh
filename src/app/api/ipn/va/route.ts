@@ -38,7 +38,17 @@ async function readPayload(req: Request): Promise<Record<string, unknown>> {
     }
   }
 
-  return { ...query, ...body };
+  const merged = { ...query, ...body } as Record<string, unknown>;
+  const encodedData = String(merged.data || '').trim();
+  if (encodedData) {
+    try {
+      const decoded = JSON.parse(Buffer.from(encodedData, 'base64').toString('utf8')) as Record<string, unknown>;
+      return { ...merged, ...decoded };
+    } catch {
+      // ignore invalid base64 json
+    }
+  }
+  return merged;
 }
 
 function verifySecureCode(params: {
@@ -229,6 +239,21 @@ async function handleIpn(req: Request) {
         createdAt: Date.now(),
       });
     }
+  }
+
+  if (!ok) {
+    // Keep short diagnostics for production debugging.
+    console.warn('[IPN_VA_VERIFY_FAIL]', {
+      method: req.method,
+      vaAccount,
+      amount,
+      cashinId,
+      transactionId,
+      clientRequestId,
+      merchantId,
+      hasSecureCode: Boolean(secureCode),
+      keys: Object.keys(payload).slice(0, 30),
+    });
   }
 
   return NextResponse.json({
