@@ -97,7 +97,7 @@ async function handleIpn(req: Request) {
   const clientRequestId = firstNonEmpty(payload, ['client_request_id', 'clientRequestId', 'requestId']);
   const merchantId = firstNonEmpty(payload, ['merchant_id', 'merchantId']);
   const secureCode = firstNonEmpty(payload, ['secure_code', 'secureCode']).toLowerCase();
-  const ok = verifySecureCode({
+  let ok = verifySecureCode({
     vaAccount,
     amount,
     cashinId,
@@ -106,6 +106,35 @@ async function handleIpn(req: Request) {
     merchantId,
     secureCode,
   });
+  const fallbackByRequestIdEnabled =
+    String(process.env.HPAY_IPN_ALLOW_FALLBACK_BY_REQUEST_ID || '').trim().toLowerCase() === 'true';
+  if (!ok && fallbackByRequestIdEnabled && clientRequestId) {
+    try {
+      const all = await db.loadAll();
+      const byReq = all.find(
+        (r) =>
+          String(r.requestId || '') === clientRequestId ||
+          String(r.parentRequestId || '') === clientRequestId,
+      );
+      const amountNum = toAmountNumber(amount);
+      const vaMatches =
+        !vaAccount ||
+        !String(byReq?.vaAccount || '').trim() ||
+        String(byReq?.vaAccount || '').trim() === String(vaAccount).trim();
+      if (byReq && String(byReq.status || '') !== 'paid' && amountNum > 0 && vaMatches) {
+        ok = true;
+        console.warn('[IPN_VA_FALLBACK_BY_REQUEST_ID]', {
+          clientRequestId,
+          vaAccount,
+          transactionId,
+          cashinId,
+          amount,
+        });
+      }
+    } catch {
+      // ignore fallback lookup failure
+    }
+  }
 
   let transferContent = '';
   try {
