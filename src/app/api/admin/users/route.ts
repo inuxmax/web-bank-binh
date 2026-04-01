@@ -43,6 +43,7 @@ export async function GET() {
 
 const patchSchema = z.object({
   id: z.string().min(1).optional(),
+  activeAll: z.boolean().optional(),
   isActive: z.boolean().optional(),
   isBanned: z.boolean().optional(),
   vaLimit: z.number().int().min(0).nullable().optional(),
@@ -69,6 +70,19 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json();
     const data = patchSchema.parse(body);
+
+    if (data.activeAll === true) {
+      const list = await db.getAllUsers();
+      let updated = 0;
+      for (const u of list) {
+        if (String(u.id) === 'admin') continue;
+        if (u.isBanned === true) continue;
+        if (u.isActive) continue;
+        await db.updateUser(u.id, { isActive: true });
+        updated += 1;
+      }
+      return NextResponse.json({ ok: true, updated });
+    }
 
     if (data.addBalance !== undefined) {
       if (!data.id) {

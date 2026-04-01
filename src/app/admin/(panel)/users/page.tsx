@@ -70,6 +70,8 @@ export default function AdminUsersPage() {
   const [ipnFeeInput, setIpnFeeInput] = useState('');
   const [withdrawFeeInput, setWithdrawFeeInput] = useState('');
   const [feeSaving, setFeeSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'active' | 'banned'>('all');
 
   async function load() {
     const res = await fetch('/api/admin/users');
@@ -85,6 +87,13 @@ export default function AdminUsersPage() {
   useEffect(() => {
     setPage(1);
   }, [pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+  useEffect(() => {
+    setPage(1);
+  }, [quickFilter]);
 
   useEffect(() => {
     if (!historyUser) {
@@ -115,6 +124,23 @@ export default function AdminUsersPage() {
     }
     load();
     return true;
+  }
+
+  async function activeAll() {
+    const ok = await popup.confirm('Bật Active cho tất cả user (trừ user bị khóa)?');
+    if (!ok) return;
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activeAll: true }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await popup.alert(typeof d.error === 'string' ? d.error : 'Active all thất bại');
+      return;
+    }
+    await popup.alert(`Đã bật active cho ${Number(d.updated || 0)} user.`);
+    await load();
   }
 
   function openFeeModal(u: U) {
@@ -197,11 +223,28 @@ export default function AdminUsersPage() {
     );
   }
 
-  const totalUsers = users.length;
+  const keyword = search.trim().toLowerCase();
+  const filteredUsers = users.filter((u) => {
+    if (quickFilter === 'active' && !u.isActive) return false;
+    if (quickFilter === 'banned' && !u.isBanned) return false;
+    if (!keyword) return true;
+    const fields = [
+      u.id,
+      u.webLogin || '',
+      u.username || '',
+      u.registerIp || '',
+      u.lastLoginIp || '',
+    ]
+      .join(' ')
+      .toLowerCase();
+    return fields.includes(keyword);
+  });
+
+  const totalUsers = filteredUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const pageStart = (safePage - 1) * pageSize;
-  const pagedUsers = users.slice(pageStart, pageStart + pageSize);
+  const pagedUsers = filteredUsers.slice(pageStart, pageStart + pageSize);
 
   return (
     <div>
@@ -422,6 +465,41 @@ export default function AdminUsersPage() {
             </button>
           ))}
           <span className="text-slate-500">/ trang</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { key: 'all', label: 'Tất cả' },
+            { key: 'active', label: 'Active' },
+            { key: 'banned', label: 'Bị khóa' },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setQuickFilter(opt.key as typeof quickFilter)}
+              className={`rounded-[var(--radius-app)] px-2.5 py-1 text-xs font-medium ${
+                quickFilter === opt.key
+                  ? 'bg-accent text-on-accent'
+                  : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => void activeAll()}
+            className="rounded-[var(--radius-app)] border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+          >
+            Active all
+          </button>
+        </div>
+        <div className="w-full sm:w-[320px]">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm user: id, login, username, IP..."
+            className="w-full rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm"
+          />
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <span>

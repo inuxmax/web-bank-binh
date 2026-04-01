@@ -29,8 +29,9 @@ export async function GET() {
   const globalFeePercent = Number((cfg as { globalFeePercent?: number }).globalFeePercent ?? 0) || 0;
   const globalIpnFeeFlat = Number((cfg as { ipnFeeFlat?: number }).ipnFeeFlat ?? 0) || 0;
   const globalWithdrawFeeFlat = Number((cfg as { withdrawFeeFlat?: number }).withdrawFeeFlat ?? 0) || 0;
-  const feePercent =
-    fresh.feePercent !== null && fresh.feePercent !== undefined ? Number(fresh.feePercent) || 0 : globalFeePercent;
+  const userFeePercent =
+    fresh.feePercent !== null && fresh.feePercent !== undefined ? Number(fresh.feePercent) : NaN;
+  const feePercent = Number.isFinite(userFeePercent) && userFeePercent > 0 ? userFeePercent : globalFeePercent;
   const ipnFeeFlat =
     fresh.ipnFeeFlat !== null && fresh.ipnFeeFlat !== undefined
       ? Number(fresh.ipnFeeFlat) || 0

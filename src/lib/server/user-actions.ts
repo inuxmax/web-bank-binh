@@ -294,9 +294,12 @@ export async function executeWithdrawalRequest(
         ? Number(user.withdrawFeeFlat)
         : NaN;
     if (Number.isFinite(userFeeFlat) && userFeeFlat >= 0) feeFlat = userFeeFlat;
-    const feePercent =
-      user.feePercent !== null ? user.feePercent : (config as { globalFeePercent?: number }).globalFeePercent;
-    const feeByPercent = Math.floor((parsed.amount * Number(feePercent || 0)) / 100);
+    const globalFeePercent = Number((config as { globalFeePercent?: number }).globalFeePercent ?? 0) || 0;
+    const userFeePercent =
+      user.feePercent !== null && user.feePercent !== undefined ? Number(user.feePercent) : NaN;
+    // Ưu tiên global khi user chưa set hoặc giá trị cũ bị 0.
+    const feePercent = Number.isFinite(userFeePercent) && userFeePercent > 0 ? userFeePercent : globalFeePercent;
+    const feeByPercent = Math.floor((parsed.amount * feePercent) / 100);
     const actualReceive = Math.max(0, parsed.amount - feeFlat - feeByPercent);
 
     const id = `${Date.now().toString().slice(-10)}${Math.floor(100000 + Math.random() * 900000)}`;
