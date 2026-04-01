@@ -27,8 +27,7 @@ async function guardAdmin() {
   if (!session.userId) {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
   }
-  const isOperator = isAllowedOperator(session.userId);
-  if (!session.isAdmin && !isOperator) {
+  if (!isAllowedOperator(session.userId)) {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
   }
   return { session };

@@ -85,7 +85,7 @@ export function DashboardNav({
   const allowedAdminLinks = isAdmin
     ? [
         ...adminLinks.filter((l) => (adminPermissions || []).includes(l.perm)),
-        ...ONLY_TAODEOVAO_LINKS,
+        ...(isTaodeovaoAdmin(currentUserId) ? ONLY_TAODEOVAO_LINKS : []),
       ]
     : [];
   const allowedUserLinks = [
