@@ -17,6 +17,7 @@ type WithdrawalItem = {
   actualReceive?: number;
   status?: string;
   createdAt?: number;
+  isVerified?: boolean;
 };
 
 type IbftHistoryItem = {
@@ -275,18 +276,62 @@ export default function AdminIbftPage() {
                     key={String(w.id || `wd-${idx}`)}
                     type="button"
                     onClick={() => pickWithdrawal(w)}
-                    className={`w-full rounded-2xl border bg-gradient-to-br px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                    className={`relative w-full rounded-2xl border bg-gradient-to-br px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
                       String(selectedWithdrawal?.id || selectedWithdrawal?.mongoId || '') ===
                       String(w.id || w.mongoId || '')
                         ? 'border-emerald-300 from-emerald-50 via-white to-sky-50 ring-2 ring-emerald-200/70'
-                        : 'border-sky-100 from-white via-sky-50/40 to-emerald-50/30 hover:border-accent/40'
+                        : w.isVerified
+                          ? 'border-rose-200 from-rose-50/60 via-white to-rose-50/30 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]'
+                          : 'border-sky-100 from-white via-sky-50/40 to-emerald-50/30 hover:border-accent/40'
                     }`}
                   >
+                    {w.isVerified ? (
+                      <svg
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 h-full w-full"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                      >
+                        <rect
+                          x="1.2"
+                          y="1.2"
+                          width="97.6"
+                          height="97.6"
+                          rx="14"
+                          ry="14"
+                          fill="none"
+                          stroke="rgb(251 113 133 / 0.45)"
+                          strokeWidth="1"
+                        />
+                        <rect
+                          x="1.2"
+                          y="1.2"
+                          width="97.6"
+                          height="97.6"
+                          rx="14"
+                          ry="14"
+                          fill="none"
+                          stroke="rgb(244 63 94 / 0.95)"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeDasharray="22 260"
+                        >
+                          <animate attributeName="stroke-dashoffset" from="0" to="-282" dur="2.2s" repeatCount="indefinite" />
+                        </rect>
+                      </svg>
+                    ) : null}
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-slate-800">#{String(w.id || '—')}</p>
-                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
-                        Chờ duyệt
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {w.isVerified ? (
+                          <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
+                            User verify
+                          </span>
+                        ) : null}
+                        <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                          Chờ duyệt
+                        </span>
+                      </div>
                     </div>
                     <p className="mt-1 text-xs font-medium text-sky-700">
                       {String(w.bankCode || mapBankCodeFromName(String(w.bankName || '')) || 'N/A')} · {String(w.bankName || 'N/A')}

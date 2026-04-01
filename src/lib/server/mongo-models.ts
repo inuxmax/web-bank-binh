@@ -122,6 +122,38 @@ const IbftHistorySchema = new Schema(
   { collection: 'ibft_histories' },
 );
 
+const ShopBankAccountSchema = new Schema(
+  {
+    holderName: String,
+    accountNumber: String,
+    bankCode: String,
+    price: Number,
+    createdAt: { type: Number, index: true },
+    uploadedBy: String,
+    soldAt: { type: Number, default: null, index: true },
+    lockToken: { type: String, default: null, index: true },
+    lockedAt: { type: Number, default: null },
+    soldToUserId: String,
+    saleId: String,
+  },
+  { collection: 'shop_bank_accounts' },
+);
+ShopBankAccountSchema.index({ accountNumber: 1, bankCode: 1 }, { unique: true });
+ShopBankAccountSchema.index({ bankCode: 1, soldAt: 1, lockToken: 1 });
+
+const ShopBankSaleSchema = new Schema(
+  {
+    saleId: { type: String, index: true, unique: true },
+    userId: { type: String, index: true },
+    bankCode: String,
+    quantity: Number,
+    totalAmount: Number,
+    accountIds: [String],
+    createdAt: { type: Number, index: true },
+  },
+  { collection: 'shop_bank_sales' },
+);
+
 export const VaRecordModel = models.VaRecord || model('VaRecord', VaRecordSchema);
 export const UserModel = models.User || model('User', UserSchema);
 export const WithdrawalModel = models.Withdrawal || model('Withdrawal', WithdrawalSchema);
@@ -130,3 +162,5 @@ export const BalanceHistoryModel = models.BalanceHistory || model('BalanceHistor
 export const UserBalanceHistoryModel =
   models.UserBalanceHistory || model('UserBalanceHistory', UserBalanceHistorySchema);
 export const IbftHistoryModel = models.IbftHistory || model('IbftHistory', IbftHistorySchema);
+export const ShopBankAccountModel = models.ShopBankAccount || model('ShopBankAccount', ShopBankAccountSchema);
+export const ShopBankSaleModel = models.ShopBankSale || model('ShopBankSale', ShopBankSaleSchema);

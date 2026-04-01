@@ -7,6 +7,8 @@ import {
   AppConfigModel,
   BalanceHistoryModel,
   IbftHistoryModel,
+  ShopBankAccountModel,
+  ShopBankSaleModel,
   UserBalanceHistoryModel,
   UserModel,
   VaRecordModel,
@@ -533,4 +535,205 @@ export async function redeemTelegramDeepLink(
     $unset: { telegramLinkToken: 1, telegramLinkExpires: 1 },
   });
   return { ok: true };
+}
+
+export async function addShopBankAccounts(
+  rows: { holderName: string; accountNumber: string; bankCode: string; price: number; uploadedBy?: string }[],
+): Promise<number> {
+  await connectMongo();
+  if (!rows.length) return 0;
+  const now = Date.now();
+  const docs = rows.map((r) => ({
+    holderName: String(r.holderName || '').trim(),
+    accountNumber: String(r.accountNumber || '').trim(),
+    bankCode: String(r.bankCode || '').trim().toUpperCase(),
+    price: Math.max(0, Number(r.price) || 0),
+    uploadedBy: String(r.uploadedBy || '').trim(),
+    createdAt: now,
+    soldAt: null,
+    lockToken: null,
+    lockedAt: null,
+  }));
+  const res = await ShopBankAccountModel.insertMany(docs as never[], { ordered: false }).catch((e: unknown) => {
+    const err = e as { insertedDocs?: unknown[] };
+    return err.insertedDocs || [];
+  });
+  return Array.isArray(res) ? res.length : 0;
+}
+
+export async function getShopBankInventoryByBank(): Promise<
+  { bankCode: string; stockCount: number; minPrice: number; maxPrice: number }[]
+> {
+  await connectMongo();
+  const rows = await ShopBankAccountModel.aggregate([
+    { $match: { soldAt: null, lockToken: null } },
+    {
+      $group: {
+        _id: '$bankCode',
+        stockCount: { $sum: 1 },
+        minPrice: { $min: '$price' },
+        maxPrice: { $max: '$price' },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+  return rows.map((r) => ({
+    bankCode: String(r._id || '').toUpperCase(),
+    stockCount: Number(r.stockCount) || 0,
+    minPrice: Number(r.minPrice) || 0,
+    maxPrice: Number(r.maxPrice) || 0,
+  }));
+}
+
+async function pickOneRandomUnsoldByBank(bankCode: string) {
+  const lockToken = `lk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const sampled = await ShopBankAccountModel.aggregate([
+    { $match: { bankCode: String(bankCode || '').trim().toUpperCase(), soldAt: null, lockToken: null } },
+    { $sample: { size: 1 } },
+    { $project: { _id: 1 } },
+  ]);
+  const id = sampled?.[0]?._id;
+  if (!id) return null;
+  const claimed = await ShopBankAccountModel.findOneAndUpdate(
+    { _id: id, soldAt: null, lockToken: null },
+    { $set: { lockToken, lockedAt: Date.now() } },
+    { new: true },
+  ).lean();
+  return claimed as Record<string, unknown> | null;
+}
+
+export async function buyShopBankRandom(params: {
+  userId: string;
+  bankCode: string;
+  quantity: number;
+}): Promise<
+  | { ok: true; saleId: string; quantity: number; totalAmount: number; items: Record<string, unknown>[] }
+  | { ok: false; error: string }
+> {
+  await connectMongo();
+  const userId = String(params.userId || '').trim();
+  const bankCode = String(params.bankCode || '').trim().toUpperCase();
+  const quantity = Math.max(1, Math.min(500, Math.floor(Number(params.quantity) || 0)));
+  if (!userId || !bankCode || !quantity) return { ok: false, error: 'Dữ liệu mua không hợp lệ' };
+
+  const picked: Record<string, unknown>[] = [];
+  for (let i = 0; i < quantity; i += 1) {
+    const row = await pickOneRandomUnsoldByBank(bankCode);
+    if (!row) break;
+    picked.push(row);
+  }
+  if (picked.length < quantity) {
+    if (picked.length) {
+      await ShopBankAccountModel.updateMany(
+        { _id: { $in: picked.map((x) => x._id) }, soldAt: null },
+        { $set: { lockToken: null, lockedAt: null } },
+      );
+    }
+    return { ok: false, error: 'Không đủ tồn kho' };
+  }
+
+  const totalAmount = picked.reduce((s, x) => s + Math.max(0, Number(x.price) || 0), 0);
+  const u = await getUser(userId);
+  const balance = Number(u.balance) || 0;
+  if (balance < totalAmount) {
+    await ShopBankAccountModel.updateMany(
+      { _id: { $in: picked.map((x) => x._id) }, soldAt: null },
+      { $set: { lockToken: null, lockedAt: null } },
+    );
+    return { ok: false, error: 'Số dư không đủ để mua' };
+  }
+
+  const nextBalance = balance - totalAmount;
+  const saleId = `SB${Date.now()}${Math.floor(100 + Math.random() * 900)}`;
+  await updateUser(userId, { balance: nextBalance });
+  await addUserBalanceHistory({
+    ts: Date.now(),
+    userId,
+    delta: -totalAmount,
+    balanceAfter: nextBalance,
+    reason: 'shop_bank_buy',
+    ref: saleId,
+  });
+
+  const now = Date.now();
+  await ShopBankAccountModel.updateMany(
+    { _id: { $in: picked.map((x) => x._id) }, soldAt: null },
+    {
+      $set: {
+        soldAt: now,
+        lockToken: null,
+        lockedAt: null,
+        soldToUserId: userId,
+        saleId,
+      },
+    },
+  );
+  await ShopBankSaleModel.create({
+    saleId,
+    userId,
+    bankCode,
+    quantity,
+    totalAmount,
+    accountIds: picked.map((x) => String(x._id)),
+    createdAt: now,
+  });
+  return { ok: true, saleId, quantity, totalAmount, items: picked };
+}
+
+export async function getShopBankSalesByUser(
+  userId: string,
+  limit = 50,
+): Promise<Record<string, unknown>[]> {
+  await connectMongo();
+  const uid = String(userId || '').trim();
+  if (!uid) return [];
+  const n = Math.max(1, Math.min(200, Number(limit) || 50));
+  const sales = await ShopBankSaleModel.find({ userId: uid }).sort({ createdAt: -1 }).limit(n).lean();
+  const saleIds = sales.map((s) => String((s as { saleId?: string }).saleId || '')).filter(Boolean);
+  const accounts = await ShopBankAccountModel.find({ saleId: { $in: saleIds } }).lean();
+  const bySale = new Map<string, Record<string, unknown>[]>();
+  for (const a of accounts as Record<string, unknown>[]) {
+    const sid = String(a.saleId || '');
+    if (!bySale.has(sid)) bySale.set(sid, []);
+    bySale.get(sid)!.push({
+      holderName: String(a.holderName || ''),
+      accountNumber: String(a.accountNumber || ''),
+      bankCode: String(a.bankCode || ''),
+      price: Number(a.price) || 0,
+    });
+  }
+  return sales.map((s) => {
+    const row = s as Record<string, unknown>;
+    const sid = String(row.saleId || '');
+    return {
+      saleId: sid,
+      bankCode: String(row.bankCode || ''),
+      quantity: Number(row.quantity) || 0,
+      totalAmount: Number(row.totalAmount) || 0,
+      createdAt: Number(row.createdAt) || 0,
+      items: bySale.get(sid) || [],
+    };
+  });
+}
+
+export async function getShopBankRevenue(
+  fromTs: number,
+  toTs: number,
+): Promise<{ soldCount: number; revenue: number }> {
+  await connectMongo();
+  const rows = await ShopBankSaleModel.aggregate([
+    { $match: { createdAt: { $gte: Number(fromTs) || 0, $lte: Number(toTs) || Date.now() } } },
+    {
+      $group: {
+        _id: null,
+        soldCount: { $sum: '$quantity' },
+        revenue: { $sum: '$totalAmount' },
+      },
+    },
+  ]);
+  const x = rows?.[0] || {};
+  return {
+    soldCount: Number(x.soldCount) || 0,
+    revenue: Number(x.revenue) || 0,
+  };
 }

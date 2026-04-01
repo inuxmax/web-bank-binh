@@ -39,7 +39,7 @@ export function DashboardShell({
         profile={profile}
         onLogout={logout}
       />
-      <div className="relative flex min-h-screen flex-1 flex-col">
+      <div className="relative flex min-h-screen flex-1 flex-col md:ml-60">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200/90 bg-surface-1/90 px-4 py-3 backdrop-blur-md md:hidden">
           <span className="text-xs font-medium text-slate-500">Sinpay Console</span>
           <button

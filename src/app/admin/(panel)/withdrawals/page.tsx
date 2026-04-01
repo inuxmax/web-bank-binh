@@ -105,11 +105,57 @@ export default function AdminWithdrawalsPage() {
         {items.map((w, idx) => (
           <li
             key={String(w.id || w.mongoId || `row-${idx}`)}
-            className="rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1/95 p-5 text-sm text-slate-800 shadow-inner-glow"
+            className={`relative rounded-[var(--radius-app-lg)] border bg-surface-1/95 p-5 text-sm text-slate-800 shadow-inner-glow ${
+              w.isVerified === true
+                ? 'border-rose-200 bg-rose-50/35 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]'
+                : 'border-slate-200/90'
+            }`}
           >
+            {w.isVerified === true ? (
+              <svg
+                aria-hidden
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                <rect
+                  x="1.2"
+                  y="1.2"
+                  width="97.6"
+                  height="97.6"
+                  rx="14"
+                  ry="14"
+                  fill="none"
+                  stroke="rgb(251 113 133 / 0.45)"
+                  strokeWidth="1"
+                />
+                <rect
+                  x="1.2"
+                  y="1.2"
+                  width="97.6"
+                  height="97.6"
+                  rx="14"
+                  ry="14"
+                  fill="none"
+                  stroke="rgb(244 63 94 / 0.95)"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeDasharray="22 260"
+                >
+                  <animate attributeName="stroke-dashoffset" from="0" to="-282" dur="2.2s" repeatCount="indefinite" />
+                </rect>
+              </svg>
+            ) : null}
             <div className="flex flex-wrap justify-between gap-2">
-                <span className="font-mono text-accent">{String(w.id || `WD-${String(w.mongoId || '').slice(-6)}`)}</span>
-              <span className="text-slate-500">{String(w.status)}</span>
+              <span className="font-mono text-accent">{String(w.id || `WD-${String(w.mongoId || '').slice(-6)}`)}</span>
+              <div className="flex items-center gap-2">
+                {w.isVerified === true ? (
+                  <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
+                    User verify
+                  </span>
+                ) : null}
+                <span className="text-slate-500">{String(w.status)}</span>
+              </div>
             </div>
             <p className="mt-2 text-slate-400">
               {String(w.bankName)} · {String(w.bankAccount)} · {String(w.bankHolder)}

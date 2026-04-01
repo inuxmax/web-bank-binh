@@ -26,8 +26,19 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status') || undefined;
-  const items = await db.getWithdrawals({ status, limit: 200 });
-  return NextResponse.json({ items });
+  const [items, users] = await Promise.all([db.getWithdrawals({ status, limit: 200 }), db.getAllUsers()]);
+  const userMap = new Map(users.map((u) => [String(u.id), u]));
+  return NextResponse.json({
+    items: items.map((it) => {
+      const uid = String((it as { userId?: string }).userId || '');
+      const u = userMap.get(uid);
+      return {
+        ...it,
+        username: String((it as { username?: string }).username || u?.username || u?.webLogin || ''),
+        isVerified: u?.isVerified === true,
+      };
+    }),
+  });
 }
 
 const updateSchema = z.object({

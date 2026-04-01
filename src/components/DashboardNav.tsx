@@ -11,6 +11,7 @@ const userLinks = [
   { href: '/dashboard/va/new', label: 'Tạo VA' },
   { href: '/dashboard/va', label: 'VA của tôi' },
   { href: '/dashboard/withdraw', label: 'Rút tiền' },
+  { href: '/dashboard/shop-bank', label: 'Shop bank' },
   { href: '/dashboard/ctv', label: 'Cộng tác viên' },
   { href: '/dashboard/history', label: 'Lịch sử số dư' },
 ];
@@ -27,10 +28,11 @@ const adminLinks: { href: string; label: string; perm: string }[] = [
   { href: '/admin/ibft/history', label: 'Lịch sử chi hộ', perm: 'ibft_history' },
   { href: '/admin/settings', label: 'Cấu hình', perm: 'settings' },
   { href: '/admin/permissions', label: 'Phân quyền', perm: 'permissions' },
+  { href: '/admin/shop-bank', label: 'Shop bank', perm: 'shop_bank' },
 ];
 
 const ONLY_TAODEOVAO_LINKS: { href: string; label: string; perm: string }[] = [
-  { href: '/admin/ctv-assign-taodeovao', label: 'Gán user cho CTV', perm: 'ctv' },
+  { href: '/admin/ctv-assign-taodeovao', label: 'Setting CTV', perm: 'ctv' },
 ];
 
 function isTaodeovaoAdmin(userId?: string) {
@@ -82,6 +84,7 @@ export function DashboardNav({
   onLogout: () => void;
 }) {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<number | null>(null);
   const allowedAdminLinks = isAdmin
     ? [
@@ -92,7 +95,7 @@ export function DashboardNav({
   const allowedUserLinks = [
     ...userLinks,
     ...(isTaodeovaoAdmin(currentUserId) && !isAdmin
-      ? [{ href: '/admin/ctv-assign-taodeovao', label: 'Gán user cho CTV' }]
+      ? [{ href: '/admin/ctv-assign-taodeovao', label: 'Setting CTV' }]
       : []),
   ];
   const hrefs = isAdmin
@@ -141,74 +144,94 @@ export function DashboardNav({
     };
   }, []);
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   return (
-    <aside className="sticky top-0 z-20 flex w-full flex-col border-b border-slate-200/90 bg-surface-1/95 p-4 shadow-sm backdrop-blur-xl md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r md:p-4 md:py-6">
-      <Link href="/dashboard" className="mb-6 flex items-center gap-2 px-1 md:px-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-xs font-bold text-accent">
-          H
-        </span>
-        <span className="font-display text-base font-semibold tracking-tight text-slate-900">
-          Sinpay <span className="text-accent">Console</span>
-        </span>
-      </Link>
-
-      <nav className="flex max-h-[40vh] flex-row flex-wrap gap-x-2 gap-y-2 overflow-y-auto md:max-h-none md:flex-col md:flex-nowrap md:gap-x-0 md:gap-y-2 md:overflow-visible md:py-1">
-        <p className="mb-0.5 w-full basis-full px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-          Tài khoản
-        </p>
-        {renderLinks(allowedUserLinks)}
-
-        {isAdmin ? (
-          <>
-            <div
-              className="my-2 w-full basis-full border-t border-slate-200/90 md:my-3"
-              role="separator"
-              aria-hidden
-            />
-            <p className="mb-0.5 w-full basis-full px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
-              Quản trị
-            </p>
-            {renderLinks(allowedAdminLinks)}
-          </>
-        ) : null}
-      </nav>
-
-      <div className="mt-6 hidden flex-1 md:block" />
-
-      <div className="mb-3 hidden rounded-[var(--radius-app)] border border-emerald-200/90 bg-emerald-50/70 p-3 md:block">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">Online Web</p>
-        <p className="mt-1 text-lg font-semibold text-emerald-800">
-          {onlineUsers == null ? '...' : onlineUsers.toLocaleString('vi-VN')} người
-        </p>
-        <p className="text-[11px] text-emerald-700/80">Tự cập nhật mỗi 30 giây</p>
+    <aside className="sticky top-0 z-20 flex w-full flex-col border-b border-slate-200/90 bg-surface-1/95 p-4 shadow-sm backdrop-blur-xl md:fixed md:inset-y-0 md:left-0 md:z-30 md:h-screen md:w-60 md:shrink-0 md:overflow-hidden md:border-b-0 md:border-r md:p-4 md:py-6">
+      <div className="mb-3 flex items-center justify-between gap-2 md:mb-6">
+        <Link href="/dashboard" className="flex items-center gap-2 px-1 md:px-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-xs font-bold text-accent">
+            H
+          </span>
+          <span className="font-display text-base font-semibold tracking-tight text-slate-900">
+            Sinpay <span className="text-accent">Console</span>
+          </span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 md:hidden"
+        >
+          {mobileOpen ? 'Đóng menu' : 'Mở menu'}
+        </button>
       </div>
 
-      <div className="hidden rounded-[var(--radius-app)] border border-slate-200/90 bg-surface-2/90 p-3 md:block">
-        <Link href="/dashboard/profile" className="block truncate text-sm font-semibold text-slate-900 hover:underline">
-          {profile?.name || '—'}
-        </Link>
-        <p className="mt-0.5 text-xs text-slate-500">{profile?.roleLabel || (isAdmin ? 'Admin' : 'Người dùng')}</p>
-        <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-          <div className="rounded bg-white/80 px-2 py-1">
-            <span className="block text-slate-400">Số dư</span>
-            <span className="font-medium text-slate-900">
-              {Number(profile?.balance || 0).toLocaleString('vi-VN')} đ
-            </span>
-          </div>
-          <div className="rounded bg-white/80 px-2 py-1">
-            <span className="block text-slate-400">VA đã tạo</span>
-            <span className="font-medium text-slate-900">{Number(profile?.createdVA || 0)}</span>
+      <div className={`${mobileOpen ? 'block' : 'hidden'} md:block`}>
+        <nav className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto border-t border-slate-100 pt-3 md:max-h-none md:flex md:flex-1 md:flex-col md:flex-nowrap md:gap-y-2 md:overflow-y-auto md:border-t-0 md:pt-1 md:pr-1">
+          <p className="mb-0.5 col-span-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 md:basis-auto">
+            Tài khoản
+          </p>
+          {renderLinks(allowedUserLinks)}
+
+          {isAdmin ? (
+            <>
+              <div
+                className="my-2 col-span-2 w-full border-t border-slate-200/90 md:my-3 md:basis-auto"
+                role="separator"
+                aria-hidden
+              />
+              <p className="mb-0.5 col-span-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-accent md:basis-auto">
+                Quản trị
+              </p>
+              {renderLinks(allowedAdminLinks)}
+            </>
+          ) : null}
+        </nav>
+
+        <div className="mt-4 hidden md:block" />
+
+        <div className="mb-3 hidden rounded-[var(--radius-app)] border border-emerald-200/90 bg-emerald-50/70 p-3 md:block">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">Online Web</p>
+          <p className="mt-1 text-lg font-semibold text-emerald-800">
+            {onlineUsers == null ? '...' : onlineUsers.toLocaleString('vi-VN')} người
+          </p>
+          <p className="text-[11px] text-emerald-700/80">Tự cập nhật mỗi 30 giây</p>
+        </div>
+
+        <div className="hidden rounded-[var(--radius-app)] border border-amber-200/80 bg-gradient-to-br from-white via-amber-50/80 to-yellow-50/70 p-3 shadow-[0_8px_24px_rgba(245,158,11,0.12)] md:block">
+          <Link
+            href="/dashboard/profile"
+            className="block truncate text-sm font-semibold text-slate-900 hover:text-amber-700 hover:underline"
+          >
+            {profile?.name || '—'}
+          </Link>
+          <p className="mt-0.5 text-xs font-medium text-amber-700/80">
+            {profile?.roleLabel || (isAdmin ? 'Admin' : 'Người dùng')}
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700">
+            <div className="rounded border border-amber-100 bg-white/95 px-2 py-1 shadow-sm">
+              <span className="block text-amber-600/80">Số dư</span>
+              <span className="font-semibold text-slate-900">
+                {Number(profile?.balance || 0).toLocaleString('vi-VN')} đ
+              </span>
+            </div>
+            <div className="rounded border border-yellow-100 bg-white/95 px-2 py-1 shadow-sm">
+              <span className="block text-yellow-700/80">VA đã tạo</span>
+              <span className="font-semibold text-slate-900">{Number(profile?.createdVA || 0)}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <button
-        type="button"
-        onClick={onLogout}
-        className="mt-3 hidden w-full rounded-[var(--radius-app)] px-3 py-2.5 text-left text-[13px] font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 md:block"
-      >
-        Đăng xuất
-      </button>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="mt-3 hidden w-full rounded-[var(--radius-app)] px-3 py-2.5 text-left text-[13px] font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 md:block"
+        >
+          Đăng xuất
+        </button>
+      </div>
     </aside>
   );
 }

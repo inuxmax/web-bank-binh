@@ -15,6 +15,7 @@ export const ADMIN_PERMISSIONS = [
   'ibft_history',
   'settings',
   'permissions',
+  'shop_bank',
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -31,6 +32,7 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, string> = {
   ibft_history: 'Lịch sử chi hộ',
   settings: 'Cấu hình',
   permissions: 'Phân quyền admin',
+  shop_bank: 'Shop bank',
 };
 
 const PERM_SET = new Set<string>(ADMIN_PERMISSIONS);

@@ -42,6 +42,7 @@ const PRESETS: { id: string; label: string; permissions: string[] }[] = [
       'ibft',
       'ibft_history',
       'settings',
+      'shop_bank',
     ],
   },
 ];

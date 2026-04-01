@@ -208,3 +208,37 @@ export async function redeemTelegramDeepLink(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   return mongo.redeemTelegramDeepLink(token, telegramUserId, telegramUsername);
 }
+
+export async function addShopBankAccounts(
+  rows: { holderName: string; accountNumber: string; bankCode: string; price: number; uploadedBy?: string }[],
+): Promise<number> {
+  return mongo.addShopBankAccounts(rows);
+}
+
+export async function getShopBankInventoryByBank(): Promise<
+  { bankCode: string; stockCount: number; minPrice: number; maxPrice: number }[]
+> {
+  return mongo.getShopBankInventoryByBank();
+}
+
+export async function buyShopBankRandom(params: {
+  userId: string;
+  bankCode: string;
+  quantity: number;
+}): Promise<
+  | { ok: true; saleId: string; quantity: number; totalAmount: number; items: Record<string, unknown>[] }
+  | { ok: false; error: string }
+> {
+  return mongo.buyShopBankRandom(params);
+}
+
+export async function getShopBankSalesByUser(userId: string, limit?: number): Promise<Record<string, unknown>[]> {
+  return mongo.getShopBankSalesByUser(userId, limit);
+}
+
+export async function getShopBankRevenue(
+  fromTs: number,
+  toTs: number,
+): Promise<{ soldCount: number; revenue: number }> {
+  return mongo.getShopBankRevenue(fromTs, toTs);
+}
