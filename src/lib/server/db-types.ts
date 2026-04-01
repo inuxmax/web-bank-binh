@@ -30,6 +30,7 @@ export type UserRecord = {
   registerAt?: number;
   lastLoginIp?: string;
   lastLoginAt?: number;
+  webLastSeenAt?: number;
   ctvStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   ctvCode?: string;
   adminPermissions?: string[];

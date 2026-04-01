@@ -232,6 +232,15 @@ export async function getAllUsers(): Promise<UserRecord[]> {
   return rows.map((d) => docToUser(d as Record<string, unknown>));
 }
 
+export async function countOnlineUsers(windowMs = 120000): Promise<number> {
+  await connectMongo();
+  const cutoff = Date.now() - Math.max(10000, Number(windowMs) || 120000);
+  return UserModel.countDocuments({
+    _id: { $ne: 'admin' },
+    webLastSeenAt: { $gte: cutoff },
+  });
+}
+
 export async function getConfig(): Promise<Record<string, unknown>> {
   await connectMongo();
   const doc = await AppConfigModel.findById('global').lean();

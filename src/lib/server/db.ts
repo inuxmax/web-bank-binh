@@ -93,6 +93,10 @@ export async function getAllUsers(): Promise<UserRecord[]> {
   return mongo.getAllUsers();
 }
 
+export async function countOnlineUsers(windowMs?: number): Promise<number> {
+  return mongo.countOnlineUsers(windowMs);
+}
+
 export async function getConfig(): Promise<Record<string, unknown>> {
   return mongo.getConfig();
 }

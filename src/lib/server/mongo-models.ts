@@ -33,6 +33,7 @@ const UserSchema = new Schema(
     registerAt: Number,
     lastLoginIp: String,
     lastLoginAt: Number,
+    webLastSeenAt: Number,
     ctvStatus: { type: String, default: 'none' },
     ctvCode: { type: String, sparse: true, unique: true },
     adminPermissions: [{ type: String }],

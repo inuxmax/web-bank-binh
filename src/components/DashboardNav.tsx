@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
@@ -69,6 +70,7 @@ export function DashboardNav({
   onLogout: () => void;
 }) {
   const pathname = usePathname();
+  const [onlineUsers, setOnlineUsers] = useState<number | null>(null);
   const allowedAdminLinks = isAdmin
     ? adminLinks.filter((l) => (adminPermissions || []).includes(l.perm))
     : [];
@@ -93,6 +95,30 @@ export function DashboardNav({
         </Link>
       );
     });
+
+  useEffect(() => {
+    let mounted = true;
+    async function syncOnline() {
+      try {
+        const res = await fetch('/api/online/status', { cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (!mounted) return;
+        if (res.ok) {
+          setOnlineUsers(Number(data.onlineUsers || 0));
+        }
+      } catch {
+        // ignore
+      }
+    }
+    void syncOnline();
+    const t = setInterval(() => {
+      void syncOnline();
+    }, 30000);
+    return () => {
+      mounted = false;
+      clearInterval(t);
+    };
+  }, []);
 
   return (
     <aside className="sticky top-0 z-20 flex w-full flex-col border-b border-slate-200/90 bg-surface-1/95 p-4 shadow-sm backdrop-blur-xl md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r md:p-4 md:py-6">
@@ -127,6 +153,14 @@ export function DashboardNav({
       </nav>
 
       <div className="mt-6 hidden flex-1 md:block" />
+
+      <div className="mb-3 hidden rounded-[var(--radius-app)] border border-emerald-200/90 bg-emerald-50/70 p-3 md:block">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">Online Web</p>
+        <p className="mt-1 text-lg font-semibold text-emerald-800">
+          {onlineUsers == null ? '...' : onlineUsers.toLocaleString('vi-VN')} người
+        </p>
+        <p className="text-[11px] text-emerald-700/80">Tự cập nhật mỗi 30 giây</p>
+      </div>
 
       <div className="hidden rounded-[var(--radius-app)] border border-slate-200/90 bg-surface-2/90 p-3 md:block">
         <p className="truncate text-sm font-semibold text-slate-900">{profile?.name || '—'}</p>
