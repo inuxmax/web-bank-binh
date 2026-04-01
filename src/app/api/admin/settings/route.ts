@@ -29,6 +29,8 @@ const patchSchema = z.object({
   minWithdrawAmount: z.number().int().min(0),
   globalVaLimit: z.number().int().min(1).max(100000).nullable(),
   autoApproveNewUsers: z.boolean(),
+  simRentApiToken: z.string(),
+  simRentMarkupPercent: z.number().min(0).max(1000),
 });
 
 export async function PATCH(req: Request) {
@@ -53,6 +55,8 @@ export async function PATCH(req: Request) {
       minWithdrawAmount: data.minWithdrawAmount,
       globalVaLimit: data.globalVaLimit,
       autoApproveNewUsers: data.autoApproveNewUsers,
+      simRentApiToken: data.simRentApiToken,
+      simRentMarkupPercent: data.simRentMarkupPercent,
     });
     return NextResponse.json({ ok: true, config });
   } catch (e) {

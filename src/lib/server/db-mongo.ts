@@ -7,6 +7,7 @@ import {
   AppConfigModel,
   BalanceHistoryModel,
   IbftHistoryModel,
+  SimRentOrderModel,
   ShopBankAccountModel,
   ShopBankSaleModel,
   UserBalanceHistoryModel,
@@ -260,6 +261,8 @@ export async function getConfig(): Promise<Record<string, unknown>> {
       ctvCommissionPercent: 1,
       globalVaLimit: null,
       autoApproveNewUsers: false,
+      simRentApiToken: '',
+      simRentMarkupPercent: 0,
     });
     return {
       globalFeePercent: 0,
@@ -269,6 +272,8 @@ export async function getConfig(): Promise<Record<string, unknown>> {
       ctvCommissionPercent: 1,
       globalVaLimit: null,
       autoApproveNewUsers: false,
+      simRentApiToken: '',
+      simRentMarkupPercent: 0,
     };
   }
   const { _id, __v, ...rest } = doc as Record<string, unknown>;
@@ -280,6 +285,8 @@ export async function getConfig(): Promise<Record<string, unknown>> {
     ctvCommissionPercent: 1,
     globalVaLimit: null,
     autoApproveNewUsers: false,
+    simRentApiToken: '',
+    simRentMarkupPercent: 0,
   };
   return { ...defaults, ...rest };
 }
@@ -736,4 +743,96 @@ export async function getShopBankRevenue(
     soldCount: Number(x.soldCount) || 0,
     revenue: Number(x.revenue) || 0,
   };
+}
+
+export async function addSimRentOrder(entry: Record<string, unknown>): Promise<Record<string, unknown>> {
+  await connectMongo();
+  const now = Date.now();
+  const orderId = String(entry.orderId || `SRO${now}${Math.floor(100 + Math.random() * 900)}`);
+  const row = {
+    orderId,
+    userId: String(entry.userId || ''),
+    serviceId: String(entry.serviceId || ''),
+    serviceName: String(entry.serviceName || ''),
+    network: String(entry.network || ''),
+    prefixs: String(entry.prefixs || ''),
+    excludePrefixs: String(entry.excludePrefixs || ''),
+    number: String(entry.number || ''),
+    rentId: String(entry.rentId || ''),
+    status: String(entry.status || 'PENDING'),
+    otp: String(entry.otp || ''),
+    smsContent: String(entry.smsContent || ''),
+    price: Number(entry.price || 0),
+    isSentSms: Boolean(entry.isSentSms),
+    statusDescription: String(entry.statusDescription || ''),
+    createdAt: Number(entry.createdAt || now),
+    updatedAt: Number(entry.updatedAt || now),
+    providerRaw: entry.providerRaw || null,
+  };
+  await SimRentOrderModel.create(row);
+  return row;
+}
+
+export async function updateSimRentOrderByRentId(
+  userId: string,
+  rentId: string,
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> {
+  await connectMongo();
+  const uid = String(userId || '').trim();
+  const rid = String(rentId || '').trim();
+  if (!uid || !rid) return null;
+  const row = await SimRentOrderModel.findOneAndUpdate(
+    { userId: uid, rentId: rid },
+    { $set: { ...patch, updatedAt: Date.now() } },
+    { new: true },
+  ).lean();
+  if (!row) return null;
+  const { _id, __v, ...rest } = row as Record<string, unknown>;
+  return rest;
+}
+
+export async function getSimRentOrdersByUser(
+  userId: string,
+  limit = 20,
+  offset = 0,
+): Promise<Record<string, unknown>[]> {
+  await connectMongo();
+  const uid = String(userId || '').trim();
+  if (!uid) return [];
+  const n = Math.max(1, Math.min(100, Number(limit) || 20));
+  const off = Math.max(0, Number(offset) || 0);
+  const rows = await SimRentOrderModel.find({ userId: uid }).sort({ createdAt: -1 }).skip(off).limit(n).lean();
+  return rows.map((r) => {
+    const { _id, __v, ...rest } = r as Record<string, unknown>;
+    return rest;
+  });
+}
+
+export async function countSimRentOrdersByUser(userId: string): Promise<number> {
+  await connectMongo();
+  const uid = String(userId || '').trim();
+  if (!uid) return 0;
+  return SimRentOrderModel.countDocuments({ userId: uid });
+}
+
+export async function getPendingSimRentOrdersByUser(
+  userId: string,
+  limit = 10,
+): Promise<Record<string, unknown>[]> {
+  await connectMongo();
+  const uid = String(userId || '').trim();
+  if (!uid) return [];
+  const n = Math.max(1, Math.min(50, Number(limit) || 10));
+  const rows = await SimRentOrderModel.find({
+    userId: uid,
+    status: { $in: ['PENDING', 'PROCESSING', 'WAITING'] },
+  })
+    .sort({ createdAt: -1 })
+    .limit(n)
+    .lean();
+  return rows.map((r) => {
+    const { _id, __v, ...rest } = r as Record<string, unknown>;
+    return rest;
+  });
 }

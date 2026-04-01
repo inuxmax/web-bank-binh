@@ -242,3 +242,31 @@ export async function getShopBankRevenue(
 ): Promise<{ soldCount: number; revenue: number }> {
   return mongo.getShopBankRevenue(fromTs, toTs);
 }
+
+export async function addSimRentOrder(entry: Record<string, unknown>): Promise<Record<string, unknown>> {
+  return mongo.addSimRentOrder(entry);
+}
+
+export async function updateSimRentOrderByRentId(
+  userId: string,
+  rentId: string,
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> {
+  return mongo.updateSimRentOrderByRentId(userId, rentId, patch);
+}
+
+export async function getSimRentOrdersByUser(
+  userId: string,
+  limit?: number,
+  offset?: number,
+): Promise<Record<string, unknown>[]> {
+  return mongo.getSimRentOrdersByUser(userId, limit, offset);
+}
+
+export async function countSimRentOrdersByUser(userId: string): Promise<number> {
+  return mongo.countSimRentOrdersByUser(userId);
+}
+
+export async function getPendingSimRentOrdersByUser(userId: string, limit?: number): Promise<Record<string, unknown>[]> {
+  return mongo.getPendingSimRentOrdersByUser(userId, limit);
+}

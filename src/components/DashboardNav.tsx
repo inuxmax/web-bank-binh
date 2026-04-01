@@ -12,6 +12,7 @@ const userLinks = [
   { href: '/dashboard/va', label: 'Tên+STK Đã Tạo' },
   { href: '/dashboard/withdraw', label: 'Rút tiền' },
   { href: '/dashboard/shop-bank', label: 'Shop bank' },
+  { href: '/dashboard/sim-rent', label: 'Thuê Sim' },
   { href: '/dashboard/ctv', label: 'Cộng tác viên' },
   { href: '/dashboard/history', label: 'Lịch sử số dư' },
 ];

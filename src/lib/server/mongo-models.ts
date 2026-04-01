@@ -75,6 +75,8 @@ const AppConfigSchema = new Schema(
     ctvCommissionPercent: { type: Number, default: 1 },
     globalVaLimit: { type: Schema.Types.Mixed, default: null },
     autoApproveNewUsers: { type: Boolean, default: false },
+    simRentApiToken: { type: String, default: '' },
+    simRentMarkupPercent: { type: Number, default: 0 },
   },
   { collection: 'app_config' },
 );
@@ -154,6 +156,32 @@ const ShopBankSaleSchema = new Schema(
   { collection: 'shop_bank_sales' },
 );
 
+const SimRentOrderSchema = new Schema(
+  {
+    orderId: { type: String, index: true, unique: true },
+    userId: { type: String, index: true },
+    serviceId: String,
+    serviceName: String,
+    network: String,
+    prefixs: String,
+    excludePrefixs: String,
+    number: String,
+    rentId: { type: String, index: true },
+    status: { type: String, index: true },
+    otp: String,
+    smsContent: String,
+    basePrice: Number,
+    price: Number,
+    markupPercent: Number,
+    isSentSms: Boolean,
+    statusDescription: String,
+    createdAt: { type: Number, index: true },
+    updatedAt: { type: Number, index: true },
+    providerRaw: Schema.Types.Mixed,
+  },
+  { collection: 'sim_rent_orders' },
+);
+
 export const VaRecordModel = models.VaRecord || model('VaRecord', VaRecordSchema);
 export const UserModel = models.User || model('User', UserSchema);
 export const WithdrawalModel = models.Withdrawal || model('Withdrawal', WithdrawalSchema);
@@ -164,3 +192,4 @@ export const UserBalanceHistoryModel =
 export const IbftHistoryModel = models.IbftHistory || model('IbftHistory', IbftHistorySchema);
 export const ShopBankAccountModel = models.ShopBankAccount || model('ShopBankAccount', ShopBankAccountSchema);
 export const ShopBankSaleModel = models.ShopBankSale || model('ShopBankSale', ShopBankSaleSchema);
+export const SimRentOrderModel = models.SimRentOrder || model('SimRentOrder', SimRentOrderSchema);

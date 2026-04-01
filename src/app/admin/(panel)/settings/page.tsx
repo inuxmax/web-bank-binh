@@ -11,8 +11,19 @@ export default function AdminSettingsPage() {
   const [ctvCommissionPercent, setCtvCommissionPercent] = useState('1');
   const [globalVaLimit, setGlobalVaLimit] = useState('');
   const [autoApproveNewUsers, setAutoApproveNewUsers] = useState(false);
+  const [simRentApiToken, setSimRentApiToken] = useState('');
+  const [simRentMarkupPercent, setSimRentMarkupPercent] = useState('0');
+  const [simRentBalance, setSimRentBalance] = useState<number | null>(null);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+
+  async function loadSimRentBalance() {
+    const res = await fetch('/api/admin/sim-rent/balance', { cache: 'no-store' });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setSimRentBalance(Number(d.balance || 0));
+    }
+  }
 
   useEffect(() => {
     void fetch('/api/admin/settings', { cache: 'no-store' })
@@ -26,10 +37,13 @@ export default function AdminSettingsPage() {
         if (cfg.ctvCommissionPercent !== undefined) setCtvCommissionPercent(String(cfg.ctvCommissionPercent));
         setGlobalVaLimit(cfg.globalVaLimit == null ? '' : String(cfg.globalVaLimit));
         setAutoApproveNewUsers(Boolean(cfg.autoApproveNewUsers));
+        setSimRentApiToken(String(cfg.simRentApiToken || ''));
+        setSimRentMarkupPercent(String(cfg.simRentMarkupPercent ?? 0));
       })
       .catch(() => {
         /* keep defaults */
       });
+    void loadSimRentBalance();
   }, []);
 
   async function save(e: React.FormEvent) {
@@ -45,6 +59,8 @@ export default function AdminSettingsPage() {
       minWithdrawAmount: Number(minWithdrawAmount),
       globalVaLimit: parsedGlobalVaLimit,
       autoApproveNewUsers,
+      simRentApiToken: String(simRentApiToken || '').trim(),
+      simRentMarkupPercent: Number(simRentMarkupPercent),
     };
     const hasInvalid =
       !Number.isFinite(payload.globalFeePercent) ||
@@ -57,6 +73,8 @@ export default function AdminSettingsPage() {
       payload.withdrawFeeFlat < 0 ||
       !Number.isFinite(payload.minWithdrawAmount) ||
       payload.minWithdrawAmount < 0 ||
+      !Number.isFinite(payload.simRentMarkupPercent) ||
+      payload.simRentMarkupPercent < 0 ||
       (payload.globalVaLimit !== null &&
         (!Number.isFinite(payload.globalVaLimit) || payload.globalVaLimit < 1));
     if (hasInvalid) {
@@ -81,6 +99,9 @@ export default function AdminSettingsPage() {
     if (cfg.minWithdrawAmount !== undefined) setMinWithdrawAmount(String(cfg.minWithdrawAmount));
     setGlobalVaLimit(cfg.globalVaLimit == null ? '' : String(cfg.globalVaLimit));
     setAutoApproveNewUsers(Boolean(cfg.autoApproveNewUsers));
+    setSimRentApiToken(String(cfg.simRentApiToken || ''));
+    setSimRentMarkupPercent(String(cfg.simRentMarkupPercent ?? 0));
+    await loadSimRentBalance();
     setMsg('Đã lưu cấu hình chung.');
   }
 
@@ -106,6 +127,32 @@ export default function AdminSettingsPage() {
                 : 'OFF - user đăng ký mới phải chờ admin kích hoạt'}
             </span>
           </label>
+        </div>
+        <div>
+          <FieldLabel>API key Thuê Sim (bossotp)</FieldLabel>
+          <input
+            type="text"
+            value={simRentApiToken}
+            onChange={(e) => setSimRentApiToken(e.target.value)}
+            className={fieldInputClass}
+            placeholder="Nhập api_token từ bossotp"
+          />
+        </div>
+        <div className="rounded-[var(--radius-app)] border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          Số dư API Thuê Sim hiện tại:{' '}
+          <span className="font-semibold text-emerald-700">
+            {simRentBalance == null ? 'Đang tải...' : `${Number(simRentBalance).toLocaleString('vi-VN')} đ`}
+          </span>
+        </div>
+        <div>
+          <FieldLabel>% nâng giá Thuê Sim</FieldLabel>
+          <input
+            type="number"
+            value={simRentMarkupPercent}
+            onChange={(e) => setSimRentMarkupPercent(e.target.value)}
+            className={fieldInputClass}
+            placeholder="Ví dụ: 10"
+          />
         </div>
         <div>
           <FieldLabel>Giới hạn tạo VA cho tất cả user</FieldLabel>
