@@ -79,7 +79,7 @@ export default function AdminIbftPage() {
   async function loadPendingWithdrawals() {
     setLoadingWithdrawals(true);
     try {
-      const res = await fetch('/api/admin/withdrawals?status=pending');
+      const res = await fetch(`/api/admin/withdrawals?status=pending&_ts=${Date.now()}`, { cache: 'no-store' });
       const j = await res.json();
       setWithdrawals(Array.isArray(j.items) ? (j.items as WithdrawalItem[]) : []);
     } finally {
@@ -127,12 +127,24 @@ export default function AdminIbftPage() {
       const msg = String(j?.raw?.errorMessage || '').trim();
       const ibftOk = code === '00' || String(j?.autoHandled?.status || '') === 'done';
       if (ibftOk) {
+        const selectedKey = String(selectedWithdrawal?.id || selectedWithdrawal?.mongoId || '');
+        if (selectedKey) {
+          setWithdrawals((prev) =>
+            prev.filter((x) => String(x.id || x.mongoId || '') !== selectedKey),
+          );
+        }
         setResult({
           ok: true,
           title: 'Đã chi hộ thành công',
           detail: `Mã phản hồi: ${code || '00'}${msg ? ` · ${msg}` : ''}`,
         });
         setSelectedWithdrawal(null);
+        setBankCode('');
+        setBankKeyword('');
+        setAccountNumber('');
+        setAccountName('');
+        setAmount('');
+        setRemark('');
         await loadPendingWithdrawals();
       } else {
         setResult({
