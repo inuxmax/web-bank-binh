@@ -13,16 +13,44 @@ function toAmountNumber(v: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Callback IPN Sinpay — GET query giống bot (verify secure_code MD5) */
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const vaAccount = String(searchParams.get('va_account') || '');
-  const amount = String(searchParams.get('amount') || '');
-  const cashinId = String(searchParams.get('cashin_id') || '');
-  const transactionId = String(searchParams.get('transaction_id') || '');
-  const clientRequestId = String(searchParams.get('client_request_id') || '');
-  const merchantId = String(searchParams.get('merchant_id') || '');
-  const secureCode = String(searchParams.get('secure_code') || '').toLowerCase();
+function firstNonEmpty(obj: Record<string, unknown>, keys: string[]) {
+  for (const k of keys) {
+    const v = String(obj[k] ?? '').trim();
+    if (v) return v;
+  }
+  return '';
+}
+
+async function readPayload(req: Request): Promise<Record<string, unknown>> {
+  const query = Object.fromEntries(new URL(req.url).searchParams.entries()) as Record<string, unknown>;
+  const contentType = String(req.headers.get('content-type') || '').toLowerCase();
+  let body: Record<string, unknown> = {};
+
+  if (req.method === 'POST') {
+    if (contentType.includes('application/json')) {
+      body = ((await req.json().catch(() => ({}))) as Record<string, unknown>) || {};
+    } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+      const form = await req.formData().catch(() => null);
+      if (form) {
+        body = {};
+        for (const [k, v] of form.entries()) body[k] = String(v);
+      }
+    }
+  }
+
+  return { ...query, ...body };
+}
+
+function verifySecureCode(params: {
+  vaAccount: string;
+  amount: string;
+  cashinId: string;
+  transactionId: string;
+  clientRequestId: string;
+  merchantId: string;
+  secureCode: string;
+}) {
+  const { vaAccount, amount, cashinId, transactionId, clientRequestId, merchantId, secureCode } = params;
 
   const msbMerchant = String(process.env.HPAY_MERCHANT_ID_MSB || '').trim();
   const klbMerchant = String(process.env.HPAY_MERCHANT_ID_KLB || '').trim();
@@ -41,23 +69,46 @@ export async function GET(req: Request) {
     String(process.env.HPAY_PASSCODE || '').trim(),
   ].filter(Boolean);
   const uniqPasscodes = [...new Set(passcodeCandidates)];
-  const expectedCodes = uniqPasscodes.map((p) =>
+  const expectedCodes = uniqPasscodes.flatMap((p) => [
+    // Legacy/bot format
     md5Hex(`${vaAccount}|${amount}|${cashinId}|${transactionId}|${p}|${clientRequestId}|${merchantId}`),
-  );
-  const ok = Boolean(secureCode && expectedCodes.includes(secureCode));
+    // Variant some integrators use (merchant and clientRequest swapped)
+    md5Hex(`${vaAccount}|${amount}|${cashinId}|${transactionId}|${p}|${merchantId}|${clientRequestId}`),
+  ]);
+  return Boolean(secureCode && expectedCodes.includes(secureCode));
+}
+
+async function handleIpn(req: Request) {
+  const payload = await readPayload(req);
+  const vaAccount = firstNonEmpty(payload, ['va_account', 'vaAccount']);
+  const amount = firstNonEmpty(payload, ['amount', 'va_amount', 'vaAmount']);
+  const cashinId = firstNonEmpty(payload, ['cashin_id', 'cashinId']);
+  const transactionId = firstNonEmpty(payload, ['transaction_id', 'transactionId']);
+  const clientRequestId = firstNonEmpty(payload, ['client_request_id', 'clientRequestId', 'requestId']);
+  const merchantId = firstNonEmpty(payload, ['merchant_id', 'merchantId']);
+  const secureCode = firstNonEmpty(payload, ['secure_code', 'secureCode']).toLowerCase();
+  const ok = verifySecureCode({
+    vaAccount,
+    amount,
+    cashinId,
+    transactionId,
+    clientRequestId,
+    merchantId,
+    secureCode,
+  });
 
   let transferContent = '';
   try {
-    const t = String(searchParams.get('transfer_content') || '');
+    const t = firstNonEmpty(payload, ['transfer_content', 'transferContent']);
     if (t) transferContent = Buffer.from(t, 'base64').toString('utf8');
   } catch {
     /* ignore */
   }
 
   if (ok) {
-    const timePaid = String(searchParams.get('time_paid') || '');
-    const bank = String(searchParams.get('va_bank_name') || '');
-    const orderId = String(searchParams.get('order_id') || '');
+    const timePaid = firstNonEmpty(payload, ['time_paid', 'timePaid']);
+    const bank = firstNonEmpty(payload, ['va_bank_name', 'vaBankName', 'bankName']);
+    const orderId = firstNonEmpty(payload, ['order_id', 'orderId']);
 
     let rec = (await db.getByRequestId(clientRequestId)) || ({} as Record<string, unknown>);
     if (!(rec as { userId?: string }).userId && vaAccount) {
@@ -184,4 +235,13 @@ export async function GET(req: Request) {
     error: ok ? '00' : '01',
     message: ok ? 'Success' : 'Invalid secure_code',
   });
+}
+
+/** Callback IPN Sinpay/Hpay — hỗ trợ GET + POST, snake_case + camelCase. */
+export async function GET(req: Request) {
+  return handleIpn(req);
+}
+
+export async function POST(req: Request) {
+  return handleIpn(req);
 }
