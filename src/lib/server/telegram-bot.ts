@@ -63,6 +63,8 @@ const CB_RANDOM_CONFIRM_CREATE = 'rnd_create';
 const CB_RANDOM_CANCEL = 'rnd_cancel';
 const CB_MANUAL_CONFIRM_CREATE = 'man_create';
 const CB_MANUAL_CANCEL = 'man_cancel';
+const CB_VA_BANK_PICK_PREFIX = 'va_bank:';
+const CB_VA_BANK_CANCEL = 'va_bank_cancel';
 const CB_WD_SAVED_PICK_PREFIX = 'wd_saved:';
 const CB_WD_SAVED_OTHER = 'wd_saved_other';
 const CB_WD_BANK_PICK_PREFIX = 'wd_bank:';
@@ -95,6 +97,7 @@ type BotSession = {
     | 'random_prefix'
     | 'random_pick'
     | 'random_confirm'
+    | 'va_bank_pick'
     | 'va_name'
     | 'va_name_confirm'
     | 'withdraw_amt'
@@ -112,6 +115,8 @@ type BotSession = {
   randomOptions?: string[];
   randomSelected?: string;
   manualName?: string;
+  pendingVaName?: string;
+  vaCreateBankCode?: 'MSB' | 'KLB';
 };
 
 const sessions = new Map<number, BotSession>();
@@ -133,6 +138,8 @@ function resetFlow(st: BotSession) {
   delete st.randomOptions;
   delete st.randomSelected;
   delete st.manualName;
+  delete st.pendingVaName;
+  delete st.vaCreateBankCode;
 }
 
 const HO = ['Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Vo', 'Dang', 'Bui', 'Do'];
@@ -203,6 +210,17 @@ function manualConfirmInlineKeyboard(Markup: typeof import('telegraf').Markup) {
       Markup.button.callback(BTN_CANCEL, CB_MANUAL_CANCEL),
     ],
     { columns: 1 },
+  );
+}
+
+function vaCreateBankInlineKeyboard(Markup: typeof import('telegraf').Markup) {
+  return Markup.inlineKeyboard(
+    [
+      Markup.button.callback('🏦 MSB', `${CB_VA_BANK_PICK_PREFIX}MSB`),
+      Markup.button.callback('🏦 KLB', `${CB_VA_BANK_PICK_PREFIX}KLB`),
+      Markup.button.callback(BTN_CANCEL, CB_VA_BANK_CANCEL),
+    ],
+    { columns: 2 },
   );
 }
 
@@ -685,6 +703,13 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
       return;
     }
 
+    if (data === CB_VA_BANK_CANCEL) {
+      resetFlow(st);
+      await ctx.answerCbQuery('Đã hủy');
+      await ctx.reply('Đã hủy thao tác tạo VA.', mainKeyboard(Markup));
+      return;
+    }
+
     if (data === CB_WD_CANCEL) {
       resetFlow(st);
       await ctx.answerCbQuery('Đã hủy');
@@ -750,29 +775,19 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
         return;
       }
       const selectedName = String(st.randomSelected || '').trim();
-      resetFlow(st);
       if (!selectedName) {
         await ctx.answerCbQuery();
         await ctx.reply('Không tìm thấy tên đã chọn. Vui lòng thử lại.', mainKeyboard(Markup));
         return;
       }
-
-      await ctx.answerCbQuery('Đang tạo VA...');
-      await ctx.reply(`Đang tạo VA tên gợi ý: «${selectedName}»…`, mainKeyboard(Markup));
-      const result = await createVirtualAccountForOwner(u.id, selectedName, { isAdminContext: false });
-      if (!result.ok) {
-        await ctx.reply(`❌ ${result.error}${result.hint ? `\n${result.hint}` : ''}`, mainKeyboard(Markup));
-        return;
-      }
-      const d = (result.decoded || {}) as DecodedVaLike;
-      await ctx.reply(renderVaCreatedMessage(d), mainKeyboard(Markup));
-      if (d.quickLink) {
-        try {
-          await ctx.replyWithPhoto({ url: d.quickLink }, mainKeyboard(Markup));
-        } catch {
-          await ctx.reply('Không tải được ảnh QR lúc này. Vui lòng thử lại sau.', mainKeyboard(Markup));
-        }
-      }
+      st.pendingVaName = selectedName;
+      st.flow = 'va_bank_pick';
+      await ctx.answerCbQuery('Chọn ngân hàng tạo VA');
+      await ctx.reply(
+        `Bạn đã chọn tên: ${selectedName}\nChọn ngân hàng tạo VA (MSB/KLB):`,
+        vaCreateBankInlineKeyboard(Markup),
+      );
+      return;
     }
 
     if (data === CB_MANUAL_CONFIRM_CREATE) {
@@ -788,16 +803,55 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
         return;
       }
       const manualName = String(st.manualName || '').trim();
-      resetFlow(st);
       if (!manualName) {
         await ctx.answerCbQuery();
         await ctx.reply('Không tìm thấy tên đã nhập. Vui lòng thử lại.', mainKeyboard(Markup));
         return;
       }
+      st.pendingVaName = manualName;
+      st.flow = 'va_bank_pick';
+      await ctx.answerCbQuery('Chọn ngân hàng tạo VA');
+      await ctx.reply(
+        `Bạn đã nhập tên: ${manualName}\nChọn ngân hàng tạo VA (MSB/KLB):`,
+        vaCreateBankInlineKeyboard(Markup),
+      );
+      return;
+    }
+
+    if (data.startsWith(CB_VA_BANK_PICK_PREFIX)) {
+      if (st.flow !== 'va_bank_pick') {
+        await ctx.answerCbQuery('Phiên chọn ngân hàng tạo VA đã hết hạn.');
+        return;
+      }
+      const u = await linkedUser(tid);
+      if (!u) {
+        resetFlow(st);
+        await ctx.answerCbQuery();
+        await ctx.reply('Mất liên kết. /lienket lại.', mainKeyboard(Markup));
+        return;
+      }
+      const bankCode = data.slice(CB_VA_BANK_PICK_PREFIX.length).trim().toUpperCase();
+      if (bankCode !== 'MSB' && bankCode !== 'KLB') {
+        await ctx.answerCbQuery('Ngân hàng không hợp lệ');
+        return;
+      }
+      const selectedName = String(st.pendingVaName || '').trim();
+      resetFlow(st);
+      if (!selectedName) {
+        await ctx.answerCbQuery();
+        await ctx.reply('Không tìm thấy tên tạo VA. Vui lòng làm lại.', mainKeyboard(Markup));
+        return;
+      }
 
       await ctx.answerCbQuery('Đang tạo VA...');
-      await ctx.reply(`Đang tạo VA tên: «${manualName}»…`, mainKeyboard(Markup));
-      const result = await createVirtualAccountForOwner(u.id, manualName, { isAdminContext: false });
+      await ctx.reply(
+        `Đang tạo VA tên: «${selectedName}»\nNgân hàng: ${bankCode}...`,
+        mainKeyboard(Markup),
+      );
+      const result = await createVirtualAccountForOwner(u.id, selectedName, {
+        isAdminContext: false,
+        bankCode,
+      });
       if (!result.ok) {
         await ctx.reply(`❌ ${result.error}${result.hint ? `\n${result.hint}` : ''}`, mainKeyboard(Markup));
         return;
@@ -823,7 +877,7 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
       st.wdBankPage = 0;
       const kb = withdrawBankInlineKeyboard(0, Markup);
       await ctx.answerCbQuery();
-      await ctx.reply('🏦 Chọn ngân hàng nhận tiền:', kb.markup);
+      await ctx.reply('🏦 Chọn ngân hàng nhận tiền (danh sách đầy đủ như trên web):', kb.markup);
       return;
     }
 
@@ -993,6 +1047,11 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
       return;
     }
 
+    if (st.flow === 'va_bank_pick') {
+      await ctx.reply('Vui lòng chọn ngân hàng tạo VA bằng nút trong đoạn chat ở trên.');
+      return;
+    }
+
     if (st.flow === 'random_prefix') {
       const normalized = normalizeNamePart(text);
       if (normalized.length < 2) {
@@ -1048,7 +1107,7 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
         st.flow = 'withdraw_bank';
         st.wdBankPage = 0;
         const kb = withdrawBankInlineKeyboard(0, Markup);
-        await ctx.reply('🏦 Chọn ngân hàng nhận tiền:', kb.markup);
+        await ctx.reply('🏦 Chọn ngân hàng nhận tiền (danh sách đầy đủ như trên web):', kb.markup);
       }
       return;
     }

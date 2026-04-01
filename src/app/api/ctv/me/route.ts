@@ -61,16 +61,20 @@ export async function GET(req: Request) {
     (r) => String(r.status || '') === 'paid' && referralIds.has(String(r.userId || '')),
   ).length;
 
-  let shareCode = String(me.ctvCode || '').trim();
-  if (!shareCode) {
-    shareCode = await generateUniqueReferralCode();
-    try {
-      await db.updateUser(me.id, { ctvCode: shareCode });
-    } catch {
-      // In case another request set it first, read back and keep that stable code.
-      const fresh = await db.getUser(me.id);
-      shareCode = String(fresh.ctvCode || '').trim();
-      if (!shareCode) throw new Error('Không thể tạo mã chia sẻ');
+  const isApproved = me.ctvStatus === 'approved';
+  let shareCode = '';
+  if (isApproved) {
+    shareCode = String(me.ctvCode || '').trim();
+    if (!shareCode) {
+      shareCode = await generateUniqueReferralCode();
+      try {
+        await db.updateUser(me.id, { ctvCode: shareCode });
+      } catch {
+        // In case another request set it first, read back and keep that stable code.
+        const fresh = await db.getUser(me.id);
+        shareCode = String(fresh.ctvCode || '').trim();
+        if (!shareCode) throw new Error('Không thể tạo mã chia sẻ');
+      }
     }
   }
   const baseUrl = getBaseUrl(req);
@@ -99,7 +103,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     status: me.ctvStatus || 'none',
-    isApproved: me.ctvStatus === 'approved',
+    isApproved,
     shareCode,
     shareLink,
     referralUsers: myReferrals.length,

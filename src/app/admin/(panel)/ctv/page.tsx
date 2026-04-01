@@ -186,22 +186,22 @@ export default function AdminCtvPage() {
                                 Set %
                               </button>
                               {r.ctvStatus !== 'approved' ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => void act(r.id, 'approve')}
-                                    className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
-                                  >
-                                    Duyệt
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => void act(r.id, 'reject')}
-                                    className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700"
-                                  >
-                                    Từ chối
-                                  </button>
-                                </>
+                                <button
+                                  type="button"
+                                  onClick={() => void act(r.id, 'approve')}
+                                  className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
+                                >
+                                  Duyệt
+                                </button>
+                              ) : null}
+                              {r.ctvStatus !== 'rejected' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void act(r.id, 'reject')}
+                                  className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700"
+                                >
+                                  Từ chối
+                                </button>
                               ) : null}
                             </div>
                           </td>
