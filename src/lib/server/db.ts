@@ -169,6 +169,10 @@ export async function findUserByWebLogin(login: string): Promise<UserRecord | nu
   return mongo.findUserByWebLogin(login);
 }
 
+export async function findUserByEmail(email: string): Promise<UserRecord | null> {
+  return mongo.findUserByEmail(email);
+}
+
 export async function findUserByCtvCode(code: string): Promise<UserRecord | null> {
   return mongo.findUserByCtvCode(code);
 }

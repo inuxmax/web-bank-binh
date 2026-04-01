@@ -17,6 +17,7 @@ const schema = z.object({
   password: z.string().min(8).max(128),
   fullName: z.string().min(2).max(80),
   phone: z.string().min(8).max(20),
+  email: z.string().email().max(120),
   referralCode: z.string().max(32).optional(),
   agreedTerms: z.literal(true),
 });
@@ -46,18 +47,25 @@ async function generateUniqueReferralCode() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { username, password, fullName, phone, referralCode } = schema.parse(body);
+    const { username, password, fullName, phone, email, referralCode } = schema.parse(body);
     const webLogin = username.trim().toLowerCase();
     const id = `web_${webLogin}`;
     const now = Date.now();
     const clientIp = getClientIp(req);
     const normalizedPhone = normalizePhone(phone);
+    const normalizedEmail = String(email || '').trim().toLowerCase();
     const defaultReferralCode = String(process.env.DEFAULT_CTV_CODE || '').trim().toUpperCase();
     const normalizedReferral = String(referralCode || '').trim().toUpperCase();
     const effectiveReferralCode = normalizedReferral || defaultReferralCode || '';
 
     if ((await db.findUser(id)) || (await db.findUserByWebLogin(webLogin))) {
       return NextResponse.json({ error: 'Tên đăng nhập đã tồn tại' }, { status: 400 });
+    }
+    if (!normalizedEmail) {
+      return NextResponse.json({ error: 'Email không hợp lệ' }, { status: 400 });
+    }
+    if (await db.findUserByEmail(normalizedEmail)) {
+      return NextResponse.json({ error: 'Email đã tồn tại' }, { status: 400 });
     }
     if (!normalizedPhone) {
       return NextResponse.json({ error: 'Số điện thoại không hợp lệ' }, { status: 400 });
@@ -82,6 +90,7 @@ export async function POST(req: Request) {
       username: username.trim(),
       fullName: fullName.trim(),
       phone: normalizedPhone,
+      email: normalizedEmail,
       isActive: false,
       registerIp: clientIp,
       registerAt: now,

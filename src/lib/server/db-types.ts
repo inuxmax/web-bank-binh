@@ -5,6 +5,7 @@ export type UserRecord = {
   username: string;
   fullName?: string;
   phone?: string;
+  email?: string;
   spamMutedUntil: number;
   spamReason: string;
   /** Khóa tài khoản: không đăng nhập, không gọi API user */
@@ -23,6 +24,8 @@ export type UserRecord = {
   /** Mã một lần để mở t.me/bot?start= (kết nối từ dashboard) */
   telegramLinkToken?: string;
   telegramLinkExpires?: number;
+  resetCodeHash?: string;
+  resetCodeExpires?: number;
   registerIp?: string;
   registerAt?: number;
   lastLoginIp?: string;

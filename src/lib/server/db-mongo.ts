@@ -407,6 +407,17 @@ export async function findUserByWebLogin(login: string): Promise<UserRecord | nu
   return docToUser(doc as Record<string, unknown>);
 }
 
+export async function findUserByEmail(email: string): Promise<UserRecord | null> {
+  await connectMongo();
+  const q = String(email || '').trim().toLowerCase();
+  if (!q) return null;
+  const doc = await UserModel.findOne({
+    email: new RegExp(`^${escapeRegex(q)}$`, 'i'),
+  }).lean();
+  if (!doc) return null;
+  return docToUser(doc as Record<string, unknown>);
+}
+
 export async function findUserByCtvCode(code: string): Promise<UserRecord | null> {
   await connectMongo();
   const q = String(code || '').trim().toUpperCase();

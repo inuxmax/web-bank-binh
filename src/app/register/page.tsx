@@ -13,6 +13,7 @@ function RegisterPageClient() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [referralCode, setReferralCode] = useState(search.get('ref') || '');
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [err, setErr] = useState('');
@@ -30,7 +31,7 @@ function RegisterPageClient() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, fullName, phone, referralCode, agreedTerms }),
+        body: JSON.stringify({ username, password, fullName, phone, email, referralCode, agreedTerms }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -73,6 +74,17 @@ function RegisterPageClient() {
                 onChange={(e) => setPhone(e.target.value)}
                 className={fieldInputClass}
                 autoComplete="tel"
+                required
+              />
+            </div>
+            <div>
+              <FieldLabel>Email</FieldLabel>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={fieldInputClass}
+                autoComplete="email"
                 required
               />
             </div>

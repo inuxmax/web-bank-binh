@@ -63,6 +63,11 @@ export default function LoginPage() {
                 autoComplete="current-password"
               />
             </div>
+            <div className="-mt-1 text-right">
+              <Link href="/forgot-password" className="text-xs font-medium text-accent hover:underline">
+                Quên mật khẩu?
+              </Link>
+            </div>
             {err ? <p className="text-sm font-medium text-rose-400">{err}</p> : null}
             <Button type="submit" disabled={loading} className="w-full" size="lg">
               {loading ? 'Đang xử lý…' : 'Đăng nhập'}
