@@ -185,8 +185,12 @@ export async function findUserByTelegramId(telegramId: string): Promise<UserReco
   return mongo.findUserByTelegramId(telegramId);
 }
 
-export async function assignTelegramToUser(userId: string, telegramId: string): Promise<void> {
-  return mongo.assignTelegramToUser(userId, telegramId);
+export async function assignTelegramToUser(
+  userId: string,
+  telegramId: string,
+  telegramUsername?: string,
+): Promise<void> {
+  return mongo.assignTelegramToUser(userId, telegramId, telegramUsername);
 }
 
 export async function clearTelegramFromUser(userId: string): Promise<void> {
@@ -200,6 +204,7 @@ export async function setTelegramLinkOffer(userId: string, token: string, expire
 export async function redeemTelegramDeepLink(
   token: string,
   telegramUserId: string,
+  telegramUsername?: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  return mongo.redeemTelegramDeepLink(token, telegramUserId);
+  return mongo.redeemTelegramDeepLink(token, telegramUserId, telegramUsername);
 }

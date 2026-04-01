@@ -16,6 +16,7 @@ function bcryptCompareSync(plain: string, hash: string): boolean {
 
 export async function linkTelegramWithCredentials(
   telegramUserId: string,
+  telegramUsername: string | undefined,
   webLogin: string,
   password: string,
 ): Promise<{ ok: true; userId: string } | { ok: false; error: string }> {
@@ -40,6 +41,6 @@ export async function linkTelegramWithCredentials(
     return { ok: false, error: USER_BANNED_MESSAGE };
   }
 
-  await db.assignTelegramToUser(u.id, String(telegramUserId));
+  await db.assignTelegramToUser(u.id, String(telegramUserId), telegramUsername);
   return { ok: true, userId: u.id };
 }

@@ -445,6 +445,17 @@ async function linkedUser(telegramUserId: number) {
   return db.findUserByTelegramId(String(telegramUserId));
 }
 
+async function syncTelegramUsername(telegramUserId: number | undefined, telegramUsername: string | undefined) {
+  if (!telegramUserId) return;
+  const next = String(telegramUsername || '').trim().replace(/^@+/, '');
+  if (!next) return;
+  const u = await linkedUser(telegramUserId);
+  if (!u) return;
+  const prev = String(u.telegramUsername || '').trim().replace(/^@+/, '');
+  if (prev.toLowerCase() === next.toLowerCase()) return;
+  await db.updateUser(u.id, { telegramUsername: next });
+}
+
 function appUrl() {
   return (process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001').replace(
     /\/$/,
@@ -506,8 +517,12 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
   bot.start(async (ctx) => {
     resetFlow(sess(ctx.chat!.id));
     const tid = ctx.from?.id;
+    const tgUsername = ctx.from?.username;
     if (tid) {
       const linked = await linkedUser(tid);
+      if (linked && tgUsername) {
+        await syncTelegramUsername(tid, tgUsername);
+      }
       if (linked && !linked.isActive) {
         await ctx.reply(renderPendingApproveStartMessage(linked));
         return;
@@ -515,7 +530,7 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
     }
     const payload = String(ctx.payload || (ctx as { startPayload?: string }).startPayload || '').trim();
     if (payload) {
-      const r = await db.redeemTelegramDeepLink(payload, String(ctx.from?.id || ''));
+      const r = await db.redeemTelegramDeepLink(payload, String(ctx.from?.id || ''), tgUsername);
       if (r.ok) {
         const linked = await linkedUser(Number(ctx.from?.id || 0));
         if (linked && !linked.isActive) {
@@ -983,7 +998,12 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
 
     if (st.flow === 'link_pass') {
       const { linkTelegramWithCredentials } = await import('@/lib/server/telegram-link');
-      const r = await linkTelegramWithCredentials(String(tid), st.linkLogin || '', text);
+      const r = await linkTelegramWithCredentials(
+        String(tid),
+        ctx.from?.username,
+        st.linkLogin || '',
+        text,
+      );
       resetFlow(st);
       if (!r.ok) {
         await ctx.reply(`❌ ${r.error}`);

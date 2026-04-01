@@ -6,7 +6,10 @@ import { PageHeader, useAppPopup } from '@/components/ui';
 type U = {
   id: string;
   username?: string;
+  fullName?: string;
   webLogin?: string;
+  phone?: string;
+  email?: string;
   isActive: boolean;
   isBanned?: boolean;
   balance: number;
@@ -17,6 +20,11 @@ type U = {
   lastLoginIp?: string;
   lastLoginAt?: number;
   ctvStatus?: string;
+  ctvCode?: string;
+  referredByCode?: string;
+  referredByUserId?: string;
+  telegramLinked?: boolean;
+  telegramUsername?: string;
   feePercent: number | null;
   ipnFeeFlat: number | null;
   withdrawFeeFlat: number | null;
@@ -87,6 +95,7 @@ export default function AdminUsersPage() {
   const [historyData, setHistoryData] = useState<HistoryPayload | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [txPage, setTxPage] = useState(1);
+  const [infoUser, setInfoUser] = useState<U | null>(null);
   const [feeUser, setFeeUser] = useState<U | null>(null);
   const [feePercentInput, setFeePercentInput] = useState('');
   const [ipnFeeInput, setIpnFeeInput] = useState('');
@@ -479,6 +488,54 @@ export default function AdminUsersPage() {
         </div>
       ) : null}
 
+      {infoUser ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="info-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            aria-label="Đóng"
+            onClick={() => setInfoUser(null)}
+          />
+          <div className="relative z-10 w-full max-w-lg rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1 p-4 shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="info-title" className="font-display text-lg font-semibold text-slate-900">
+                  Thông tin user
+                </h2>
+                <p className="mt-0.5 font-mono text-xs text-accent">{infoUser.id}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInfoUser(null)}
+                className="rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Đóng
+              </button>
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+              <p><span className="text-slate-500">Họ tên:</span> <span className="font-medium text-slate-900">{infoUser.fullName || '—'}</span></p>
+              <p><span className="text-slate-500">Username:</span> <span className="font-medium text-slate-900">{infoUser.username || '—'}</span></p>
+              <p><span className="text-slate-500">Login:</span> <span className="font-medium text-slate-900">{infoUser.webLogin || '—'}</span></p>
+              <p><span className="text-slate-500">SĐT:</span> <span className="font-medium text-slate-900">{infoUser.phone || '—'}</span></p>
+              <p className="sm:col-span-2"><span className="text-slate-500">Email:</span> <span className="font-medium text-slate-900">{infoUser.email || '—'}</span></p>
+              <p><span className="text-slate-500">Telegram:</span> <span className="font-medium text-slate-900">{infoUser.telegramLinked ? 'Đã liên kết' : 'Chưa liên kết'}</span></p>
+              <p><span className="text-slate-500">@username Telegram:</span> <span className="font-mono text-slate-900">{infoUser.telegramUsername ? `@${String(infoUser.telegramUsername).replace(/^@+/, '')}` : '—'}</span></p>
+              <p><span className="text-slate-500">CTV:</span> <span className="font-medium text-slate-900">{infoUser.ctvStatus || 'none'}</span></p>
+              <p><span className="text-slate-500">Mã CTV:</span> <span className="font-mono text-slate-900">{infoUser.ctvCode || '—'}</span></p>
+              <p><span className="text-slate-500">Giới thiệu bởi:</span> <span className="font-medium text-slate-900">{infoUser.referredByUserId || '—'}</span></p>
+              <p><span className="text-slate-500">Mã ref dùng:</span> <span className="font-mono text-slate-900">{infoUser.referredByCode || '—'}</span></p>
+              <p className="sm:col-span-2"><span className="text-slate-500">IP đăng ký:</span> <span className="font-mono text-slate-900">{infoUser.registerIp || '—'}</span> · <span className="text-slate-600">{fmtTs(Number(infoUser.registerAt || 0))}</span></p>
+              <p className="sm:col-span-2"><span className="text-slate-500">IP đăng nhập gần nhất:</span> <span className="font-mono text-slate-900">{infoUser.lastLoginIp || '—'}</span> · <span className="text-slate-600">{fmtTs(Number(infoUser.lastLoginAt || 0))}</span></p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {feeUser ? (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center"
@@ -726,6 +783,13 @@ export default function AdminUsersPage() {
                       className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
                     >
                       Set phí
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInfoUser(u)}
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
+                    >
+                      Thông tin
                     </button>
                     <button
                       type="button"

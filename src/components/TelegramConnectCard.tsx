@@ -8,18 +8,28 @@ export function TelegramConnectCard({ initialLinked }: { initialLinked: boolean 
   const [message, setMessage] = useState<string | null>(null);
 
   async function openTelegramLink() {
+    // Open a blank tab immediately on user click so mobile browsers
+    // don't block navigation after async fetch.
+    const popup = window.open('', '_blank', 'noopener,noreferrer');
     setBusy(true);
     setMessage(null);
     try {
       const res = await fetch('/api/me/telegram-link', { method: 'POST' });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (popup && !popup.closed) popup.close();
         setMessage(typeof d.error === 'string' ? d.error : 'Không tạo được liên kết.');
         return;
       }
       if (typeof d.url === 'string') {
-        window.open(d.url, '_blank', 'noopener,noreferrer');
+        if (popup && !popup.closed) {
+          popup.location.href = d.url;
+        } else {
+          window.location.href = d.url;
+        }
         setMessage('Đã mở Telegram. Trong chat với bot, bấm «Start» / «Bắt đầu». Sau đó tải lại trang này để thấy trạng thái «Đã kết nối».');
+      } else if (popup && !popup.closed) {
+        popup.close();
       }
     } finally {
       setBusy(false);

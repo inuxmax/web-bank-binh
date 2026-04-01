@@ -453,15 +453,28 @@ export async function findUserByTelegramId(telegramId: string): Promise<UserReco
   return docToUser(doc as Record<string, unknown>);
 }
 
+function normalizeTelegramUsername(v: string) {
+  const raw = String(v || '').trim().replace(/^@+/, '');
+  if (!raw) return '';
+  return raw.replace(/[^\w]/g, '').slice(0, 64);
+}
+
 /** Gỡ telegramId khỏi mọi user đang dùng nó, rồi gán cho userId (liên kết bot). */
-export async function assignTelegramToUser(userId: string, telegramId: string): Promise<void> {
+export async function assignTelegramToUser(
+  userId: string,
+  telegramId: string,
+  telegramUsername?: string,
+): Promise<void> {
   await connectMongo();
   const tid = String(telegramId || '').trim();
   const uid = String(userId || '').trim();
   if (!tid || !uid) return;
-  await UserModel.updateMany({ telegramId: tid }, { $unset: { telegramId: 1 } });
+  await UserModel.updateMany({ telegramId: tid }, { $unset: { telegramId: 1, telegramUsername: 1 } });
+  const tgUsername = normalizeTelegramUsername(String(telegramUsername || ''));
+  const setData: Record<string, unknown> = { telegramId: tid };
+  if (tgUsername) setData.telegramUsername = tgUsername;
   await UserModel.findByIdAndUpdate(uid, {
-    $set: { telegramId: tid },
+    $set: setData,
     $unset: { telegramLinkToken: 1, telegramLinkExpires: 1 },
   });
 }
@@ -469,7 +482,7 @@ export async function assignTelegramToUser(userId: string, telegramId: string): 
 export async function clearTelegramFromUser(userId: string): Promise<void> {
   await connectMongo();
   await UserModel.findByIdAndUpdate(String(userId), {
-    $unset: { telegramId: 1, telegramLinkToken: 1, telegramLinkExpires: 1 },
+    $unset: { telegramId: 1, telegramUsername: 1, telegramLinkToken: 1, telegramLinkExpires: 1 },
   });
 }
 
@@ -483,6 +496,7 @@ export async function setTelegramLinkOffer(userId: string, token: string, expire
 export async function redeemTelegramDeepLink(
   token: string,
   telegramUserId: string,
+  telegramUsername?: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   await connectMongo();
   const t = String(token || '').trim();
@@ -504,9 +518,12 @@ export async function redeemTelegramDeepLink(
   if (u.isBanned === true) {
     return { ok: false, error: 'Tài khoản đã bị khóa.' };
   }
-  await UserModel.updateMany({ telegramId: tid }, { $unset: { telegramId: 1 } });
+  await UserModel.updateMany({ telegramId: tid }, { $unset: { telegramId: 1, telegramUsername: 1 } });
+  const tgUsername = normalizeTelegramUsername(String(telegramUsername || ''));
+  const setData: Record<string, unknown> = { telegramId: tid };
+  if (tgUsername) setData.telegramUsername = tgUsername;
   await UserModel.findByIdAndUpdate(userId, {
-    $set: { telegramId: tid },
+    $set: setData,
     $unset: { telegramLinkToken: 1, telegramLinkExpires: 1 },
   });
   return { ok: true };

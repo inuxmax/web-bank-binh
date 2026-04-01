@@ -117,11 +117,21 @@ export async function GET(req: Request) {
 
     const totalUsers = users.filter((u) => inRange(u.registerAt, fromTs, toTs)).length;
     const totalCtv = users.filter((u) => String(u.ctvStatus || '') === 'approved' && inRange(u.ctvApprovedAt, fromTs, toTs)).length;
+    const platformFeeAmount = Math.round(totalTransactionAmount * 0.03);
+    const totalProfit = totalTransactionAmount - totalIbftAmount - platformFeeAmount;
 
     return NextResponse.json({
       ok: true,
       range: { fromTs, toTs, preset: parsed.preset, from: parsed.from || '', to: parsed.to || '' },
-      totals: { totalVaCreated, totalTransactionAmount, totalIbftAmount, totalUsers, totalCtv },
+      totals: {
+        totalVaCreated,
+        totalTransactionAmount,
+        totalIbftAmount,
+        totalUsers,
+        totalCtv,
+        platformFeeAmount,
+        totalProfit,
+      },
     });
   } catch (e) {
     if (e instanceof z.ZodError) {

@@ -21,6 +21,8 @@ export type UserRecord = {
   webLogin?: string;
   /** ID Telegram (string) sau khi /lienket — một Telegram chỉ gắn một user */
   telegramId?: string;
+  /** Username Telegram (không gồm @), dùng để hiển thị cho admin */
+  telegramUsername?: string;
   /** Mã một lần để mở t.me/bot?start= (kết nối từ dashboard) */
   telegramLinkToken?: string;
   telegramLinkExpires?: number;

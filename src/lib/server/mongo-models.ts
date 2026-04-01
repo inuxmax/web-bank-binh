@@ -25,6 +25,7 @@ const UserSchema = new Schema(
     fullName: String,
     phone: String,
     telegramId: { type: String, sparse: true, unique: true },
+    telegramUsername: String,
     telegramLinkToken: { type: String, sparse: true, unique: true },
     telegramLinkExpires: { type: Number, default: null },
     resetCodeHash: String,
