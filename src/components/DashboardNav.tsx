@@ -168,8 +168,8 @@ export function DashboardNav({
         </button>
       </div>
 
-      <div className={`${mobileOpen ? 'block' : 'hidden'} md:block`}>
-        <nav className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto border-t border-slate-100 pt-3 md:max-h-none md:flex md:flex-1 md:flex-col md:flex-nowrap md:gap-y-2 md:overflow-y-auto md:border-t-0 md:pt-1 md:pr-1">
+      <div className={`${mobileOpen ? 'block' : 'hidden'} md:flex md:min-h-0 md:flex-1 md:flex-col`}>
+        <nav className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto border-t border-slate-100 pt-3 md:min-h-0 md:max-h-none md:flex md:flex-1 md:flex-col md:flex-nowrap md:gap-y-2 md:overflow-y-auto md:border-t-0 md:pt-1 md:pr-1">
           <p className="mb-0.5 col-span-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 md:basis-auto">
             Tài khoản
           </p>
