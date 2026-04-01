@@ -12,6 +12,7 @@ type Row = {
   referralCount: number;
   commissionTotal: number;
   commissionCount: number;
+  userRatePercent: number | null;
   ratePercent: number;
   ctvAppliedAt: number;
   ctvApprovedAt: number;
@@ -56,6 +57,38 @@ export default function AdminCtvPage() {
     await load();
   }
 
+  async function setUserRate(r: Row) {
+    const val = await popup.prompt({
+      title: `Set % hoa hồng - ${r.id}`,
+      message: 'Nhập từ 0 đến 100. Để trống để dùng mặc định global.',
+      defaultValue: r.userRatePercent == null ? '' : String(r.userRatePercent),
+      placeholder: 'Ví dụ: 1.5',
+    });
+    if (val === null) return;
+    const raw = String(val || '').trim();
+    let ratePercent: number | null = null;
+    if (raw !== '') {
+      const n = Number(raw.replace(/[^\d.]/g, ''));
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        await popup.alert('% không hợp lệ (0-100)');
+        return;
+      }
+      ratePercent = n;
+    }
+    const res = await fetch('/api/admin/ctv', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: r.id, action: 'set_rate', ratePercent }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await popup.alert(String(d.error || 'Lưu % hoa hồng thất bại'));
+      return;
+    }
+    await popup.alert('Đã cập nhật % hoa hồng cho user.');
+    await load();
+  }
+
   return (
     <div>
       <popup.PopupHost />
@@ -96,11 +129,23 @@ export default function AdminCtvPage() {
                   <td className="p-3">{Number(r.referralCount || 0).toLocaleString('vi-VN')}</td>
                   <td className="p-3">{Number(r.commissionTotal || 0).toLocaleString('vi-VN')} đ</td>
                   <td className="p-3">{Number(r.commissionCount || 0).toLocaleString('vi-VN')}</td>
-                  <td className="p-3">{Number(r.ratePercent || 0)}%</td>
+                  <td className="p-3">
+                    <div>{Number(r.ratePercent || 0)}%</div>
+                    <div className="text-[11px] text-slate-500">
+                      {r.userRatePercent == null ? 'Theo global' : 'Set riêng'}
+                    </div>
+                  </td>
                   <td className="p-3 text-xs">{fmtTs(r.ctvAppliedAt)}</td>
                   <td className="p-3 text-xs">{fmtTs(r.ctvApprovedAt)}</td>
                   <td className="p-3">
                     <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void setUserRate(r)}
+                        className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                      >
+                        Set %
+                      </button>
                       <button
                         type="button"
                         onClick={() => void act(r.id, 'approve')}

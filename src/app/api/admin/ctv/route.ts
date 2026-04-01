@@ -36,6 +36,7 @@ export async function GET() {
       referralCount,
       commissionTotal: Number(u.ctvCommissionTotal || 0),
       commissionCount: Number(u.ctvCommissionCount || 0),
+      userRatePercent: u.ctvRatePercent == null ? null : Number(u.ctvRatePercent),
       ratePercent: Number(
         u.ctvRatePercent ??
           (Number.isFinite(cfgRate) ? cfgRate : undefined) ??
@@ -52,8 +53,8 @@ export async function GET() {
 
 const patchSchema = z.object({
   id: z.string().min(1),
-  action: z.enum(['approve', 'reject']),
-  ratePercent: z.number().min(0).max(100).optional(),
+  action: z.enum(['approve', 'reject', 'set_rate']),
+  ratePercent: z.number().min(0).max(100).nullable().optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -89,9 +90,13 @@ export async function PATCH(req: Request) {
                   1,
               ),
       });
-    } else {
+    } else if (action === 'reject') {
       await db.updateUser(id, {
         ctvStatus: 'rejected',
+      });
+    } else {
+      await db.updateUser(id, {
+        ctvRatePercent: ratePercent ?? null,
       });
     }
     return NextResponse.json({ ok: true });

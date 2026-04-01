@@ -447,30 +447,38 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="mt-2 overflow-x-auto rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1 shadow-inner-glow">
-        <table className="w-full min-w-[800px] text-left text-sm text-slate-700">
+        <table className="w-full min-w-[1500px] text-left text-sm text-slate-700">
           <thead className="border-b border-slate-200 bg-surface-2/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
             <tr>
-              <th className="p-3">ID</th>
-              <th className="p-3">Login</th>
-              <th className="p-3">Active</th>
-              <th className="p-3">Khóa</th>
-              <th className="p-3">Số dư</th>
-              <th className="p-3">VA</th>
-              <th className="p-3">% phí</th>
-              <th className="p-3">Phí rút</th>
-              <th className="p-3">Phí chuyển</th>
-              <th className="p-3">IP đăng ký</th>
-              <th className="p-3">IP đăng nhập gần nhất</th>
-              <th className="p-3">Thao tác</th>
+              <th className="w-[190px] p-3">ID</th>
+              <th className="w-[150px] p-3">Login</th>
+              <th className="w-[70px] p-3 whitespace-nowrap">Active</th>
+              <th className="w-[90px] p-3 whitespace-nowrap">Khóa</th>
+              <th className="w-[120px] p-3 whitespace-nowrap">Số dư</th>
+              <th className="w-[90px] p-3 whitespace-nowrap">VA</th>
+              <th className="w-[90px] p-3 whitespace-nowrap">% phí</th>
+              <th className="w-[110px] p-3 whitespace-nowrap">Phí rút</th>
+              <th className="w-[120px] p-3 whitespace-nowrap">Phí chuyển</th>
+              <th className="w-[250px] p-3 whitespace-nowrap">IP đăng ký</th>
+              <th className="w-[250px] p-3 whitespace-nowrap">IP đăng nhập gần nhất</th>
+              <th className="w-[360px] p-3 whitespace-nowrap">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {pagedUsers.map((u) => (
               <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50/80">
-                <td className="p-3 font-mono text-xs text-accent">{u.id}</td>
-                <td className="p-3">{u.webLogin || u.username || '—'}</td>
-                <td className="p-3">{u.isActive ? '✓' : '—'}</td>
+                <td className="p-3 font-mono text-xs text-accent">
+                  <div className="max-w-[180px] truncate" title={u.id}>
+                    {u.id}
+                  </div>
+                </td>
                 <td className="p-3">
+                  <div className="max-w-[140px] truncate" title={u.webLogin || u.username || '—'}>
+                    {u.webLogin || u.username || '—'}
+                  </div>
+                </td>
+                <td className="p-3 whitespace-nowrap">{u.isActive ? '✓' : '—'}</td>
+                <td className="p-3 whitespace-nowrap">
                   {u.isBanned ? (
                     <span className="rounded-md bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800">
                       Khóa
@@ -479,23 +487,23 @@ export default function AdminUsersPage() {
                     <span className="text-slate-400">—</span>
                   )}
                 </td>
-                <td className="p-3">{(u.balance || 0).toLocaleString('vi-VN')}</td>
-                <td className="p-3">
+                <td className="p-3 whitespace-nowrap tabular-nums">{(u.balance || 0).toLocaleString('vi-VN')}</td>
+                <td className="p-3 whitespace-nowrap">
                   {u.createdVA} / {u.vaLimit ?? '∞'}
                 </td>
-                <td className="p-3">{u.feePercent == null ? '—' : `${u.feePercent}%`}</td>
-                <td className="p-3">{u.withdrawFeeFlat == null ? '—' : Number(u.withdrawFeeFlat).toLocaleString('vi-VN')}</td>
-                <td className="p-3">{u.ipnFeeFlat == null ? '—' : Number(u.ipnFeeFlat).toLocaleString('vi-VN')}</td>
+                <td className="p-3 whitespace-nowrap">{u.feePercent == null ? '—' : `${u.feePercent}%`}</td>
+                <td className="p-3 whitespace-nowrap">{u.withdrawFeeFlat == null ? '—' : Number(u.withdrawFeeFlat).toLocaleString('vi-VN')}</td>
+                <td className="p-3 whitespace-nowrap">{u.ipnFeeFlat == null ? '—' : Number(u.ipnFeeFlat).toLocaleString('vi-VN')}</td>
                 <td className="p-3 text-xs">
-                  <div className="font-mono">{u.registerIp || '—'}</div>
-                  <div className="text-slate-500">{fmtTs(Number(u.registerAt || 0))}</div>
+                  <div className="max-w-[240px] break-all font-mono leading-4">{u.registerIp || '—'}</div>
+                  <div className="mt-1 whitespace-nowrap text-slate-500">{fmtTs(Number(u.registerAt || 0))}</div>
                 </td>
                 <td className="p-3 text-xs">
-                  <div className="font-mono">{u.lastLoginIp || '—'}</div>
-                  <div className="text-slate-500">{fmtTs(Number(u.lastLoginAt || 0))}</div>
+                  <div className="max-w-[240px] break-all font-mono leading-4">{u.lastLoginIp || '—'}</div>
+                  <div className="mt-1 whitespace-nowrap text-slate-500">{fmtTs(Number(u.lastLoginAt || 0))}</div>
                 </td>
                 <td className="p-3">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex min-w-max flex-nowrap gap-2">
                     <button
                       type="button"
                       onClick={() => patch(u.id, { isActive: !u.isActive })}
