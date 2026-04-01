@@ -6,6 +6,7 @@ import {
   type AdminPermission,
   getSessionAdminPermissions,
 } from '@/lib/server/admin-permissions';
+import { getVaSyncStatus } from '@/lib/server/va-sync-poller';
 
 export default async function AdminHomePage() {
   const session = await getSession();
@@ -36,6 +37,7 @@ export default async function AdminHomePage() {
     { href: '/admin/permissions', perm: 'permissions', t: 'Phân quyền', d: 'Cấp quyền admin theo module' },
   ];
   const visibleCards = cards.filter((c) => permissions.includes(c.perm));
+  const syncStatus = getVaSyncStatus();
   return (
     <div>
       <PageHeader
@@ -57,6 +59,15 @@ export default async function AdminHomePage() {
             </span>
           </Link>
         ))}
+      </div>
+      <div className="mt-4 rounded-[var(--radius-app)] border border-slate-200/90 bg-surface-2/60 px-4 py-3 text-xs text-slate-600">
+        <span className="font-semibold text-slate-800">VA Sync Poller</span>{' '}
+        {syncStatus.enabled ? 'đang bật' : 'đang tắt'} · Lần quét gần nhất:{' '}
+        <span className="font-medium text-slate-800">
+          {syncStatus.lastRunAt ? new Date(syncStatus.lastRunAt).toLocaleString('vi-VN') : 'chưa có'}
+        </span>{' '}
+        · Bản ghi vừa sync:{' '}
+        <span className="font-medium text-emerald-700">{Number(syncStatus.lastSynced || 0)}</span>
       </div>
       <p className="mt-12 rounded-[var(--radius-app)] border border-slate-200/90 bg-surface-2/60 px-4 py-3 text-xs text-slate-600">
         Callback IPN:{' '}

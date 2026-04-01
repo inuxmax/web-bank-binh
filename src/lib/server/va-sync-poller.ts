@@ -1,9 +1,23 @@
 import 'server-only';
 
 import * as db from '@/lib/server/db';
-import { getBankOverrides, getTransactionDetail } from './hpay';
+import { getBankOverrides, getTransactionDetail, inquireVirtualAccount } from './hpay';
 
 const POLLER_KEY = '__sinpayVaSyncPollerStarted' as const;
+const POLLER_STATUS_KEY = '__sinpayVaSyncPollerStatus' as const;
+
+type VaSyncStatus = {
+  enabled: boolean;
+  running: boolean;
+  intervalMs: number;
+  limit: number;
+  lastRunAt: number;
+  lastDurationMs: number;
+  lastChecked: number;
+  lastSynced: number;
+  totalSynced: number;
+  lastError: string;
+};
 
 function num(v: unknown): number {
   const n = Number(String(v ?? '').replace(/[^\d.-]/g, ''));
@@ -23,6 +37,25 @@ function isPaidStatus(v: unknown): boolean {
   return ['PAID', 'SUCCESS', 'COMPLETED', 'DONE', '00'].includes(s);
 }
 
+function getStatusStore(): VaSyncStatus {
+  const g = globalThis as typeof globalThis & { [POLLER_STATUS_KEY]?: VaSyncStatus };
+  if (!g[POLLER_STATUS_KEY]) {
+    g[POLLER_STATUS_KEY] = {
+      enabled: true,
+      running: false,
+      intervalMs: pollIntervalMs(),
+      limit: pollLimit(),
+      lastRunAt: 0,
+      lastDurationMs: 0,
+      lastChecked: 0,
+      lastSynced: 0,
+      totalSynced: 0,
+      lastError: '',
+    };
+  }
+  return g[POLLER_STATUS_KEY]!;
+}
+
 function pollIntervalMs() {
   const raw = Number(process.env.HPAY_UNPAID_POLL_INTERVAL_MS || 90000);
   const val = Number.isFinite(raw) ? Math.floor(raw) : 90000;
@@ -33,6 +66,13 @@ function pollLimit() {
   const raw = Number(process.env.HPAY_UNPAID_POLL_LIMIT || 200);
   const val = Number.isFinite(raw) ? Math.floor(raw) : 200;
   return Math.max(20, Math.min(1000, val));
+}
+
+function normalizeSourceCode(raw: string): string {
+  const s = String(raw || '').trim().toUpperCase();
+  if (s === 'MSB' || s.includes('MARITIME')) return 'MSB';
+  if (s === 'KLB' || s.includes('KIENLONG')) return 'KLB';
+  return s;
 }
 
 async function markPaidByDetail(rec: Record<string, unknown>, detail: Record<string, unknown>) {
@@ -86,7 +126,7 @@ async function markPaidByDetail(rec: Record<string, unknown>, detail: Record<str
   return true;
 }
 
-async function syncSweep() {
+async function syncSweep(): Promise<{ checked: number; synced: number }> {
   const rows = await db.loadAll();
   const pending = rows
     .filter((r) => String(r.status || '').trim() !== 'paid')
@@ -97,7 +137,7 @@ async function syncSweep() {
   for (const rec of pending) {
     const clientRequestId = String(rec.parentRequestId || rec.requestId || '').trim();
     if (!clientRequestId) continue;
-    const bankCode = String(rec.vaBank || '').trim().toUpperCase();
+    const bankCode = normalizeSourceCode(String(rec.vaBank || ''));
     const ov = getBankOverrides(bankCode);
     try {
       const { decoded } = await getTransactionDetail({
@@ -108,10 +148,30 @@ async function syncSweep() {
         clientSecretOverride: ov.clientSecretOverride,
         xApiMidOverride: ov.xApiMidOverride,
       });
-      if (!decoded) continue;
-      const status = pick(decoded, ['status', 'tranStatus', 'paymentStatus', 'errorCode']);
-      if (!isPaidStatus(status)) continue;
-      const ok = await markPaidByDetail(rec as Record<string, unknown>, decoded);
+      const vaAccount = String(rec.vaAccount || '').trim();
+      const vaInquiry = vaAccount
+        ? await inquireVirtualAccount({
+            vaAccount,
+            merchantIdOverride: ov.midOverride,
+            passcodeOverride: ov.passOverride,
+            clientIdOverride: ov.clientIdOverride,
+            clientSecretOverride: ov.clientSecretOverride,
+            xApiMidOverride: ov.xApiMidOverride,
+          }).catch(() => null)
+        : null;
+
+      const detailStatus = decoded ? pick(decoded, ['status', 'tranStatus', 'paymentStatus', 'errorCode']) : '';
+      const inquiryStatus = vaInquiry?.decoded
+        ? pick(vaInquiry.decoded as Record<string, unknown>, ['status', 'tranStatus', 'paymentStatus', 'errorCode'])
+        : '';
+      const paidByDetail = decoded && isPaidStatus(detailStatus);
+      const paidByInquiry = vaInquiry?.decoded && isPaidStatus(inquiryStatus);
+      if (!paidByDetail && !paidByInquiry) continue;
+      const merged = {
+        ...(vaInquiry?.decoded || {}),
+        ...(decoded || {}),
+      } as Record<string, unknown>;
+      const ok = await markPaidByDetail(rec as Record<string, unknown>, merged);
       if (ok) synced += 1;
     } catch {
       // skip single record and continue
@@ -120,6 +180,7 @@ async function syncSweep() {
   if (synced > 0) {
     console.log(`[VA_SYNC_POLLER] synced=${synced}`);
   }
+  return { checked: pending.length, synced };
 }
 
 export function startVaSyncPoller() {
@@ -128,15 +189,32 @@ export function startVaSyncPoller() {
   g[POLLER_KEY] = true;
 
   let running = false;
+  const status = getStatusStore();
+  status.enabled = true;
+  status.intervalMs = pollIntervalMs();
+  status.limit = pollLimit();
   const run = async () => {
     if (running) return;
     running = true;
+    const startedAt = Date.now();
+    status.running = true;
+    status.lastError = '';
     try {
-      await syncSweep();
+      const before = Date.now();
+      const result = await syncSweep();
+      status.lastRunAt = Date.now();
+      status.lastDurationMs = status.lastRunAt - before;
+      status.lastChecked = result.checked;
+      status.lastSynced = result.synced;
+      status.totalSynced += result.synced;
     } catch (e) {
+      status.lastError = e instanceof Error ? e.message : String(e);
       console.error('[VA_SYNC_POLLER] error:', e);
     } finally {
       running = false;
+      status.running = false;
+      if (!status.lastRunAt) status.lastRunAt = startedAt;
+      status.lastDurationMs = Date.now() - startedAt;
     }
   };
 
@@ -144,5 +222,9 @@ export function startVaSyncPoller() {
   setInterval(() => {
     void run();
   }, pollIntervalMs());
+}
+
+export function getVaSyncStatus() {
+  return getStatusStore();
 }
 

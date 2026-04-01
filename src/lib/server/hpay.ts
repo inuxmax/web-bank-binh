@@ -416,6 +416,66 @@ export async function getTransactionDetail(params: {
   return { raw: resData, decoded, requestId: payload.requestId };
 }
 
+export async function inquireVirtualAccount(params: {
+  requestId?: string;
+  vaAccount: string;
+  merchantIdOverride?: string;
+  passcodeOverride?: string;
+  clientIdOverride?: string;
+  clientSecretOverride?: string;
+  xApiMidOverride?: string;
+}) {
+  const baseUrl = process.env.HPAY_BASE_URL || 'https://openapi.htpgroup.com.vn';
+  const path = process.env.HPAY_VA_INQUIRY_PATH || '/service/va/v1/inquiry';
+  const url = `${baseUrl}${path}`;
+  const merchantId = params.merchantIdOverride || process.env.HPAY_MERCHANT_ID || '';
+  const passcode = params.passcodeOverride || process.env.HPAY_PASSCODE || '';
+  const midForHeader =
+    (params.xApiMidOverride || '').trim() ||
+    (params.merchantIdOverride || '').trim() ||
+    (process.env.HPAY_X_API_MID || '').trim() ||
+    (process.env.HPAY_MERCHANT_ID || '').trim();
+
+  const privateKey = readPrivateKey();
+  if (!privateKey) throw new Error('Không tìm thấy private key');
+  const crypto = getNodeCrypto();
+  crypto.createPrivateKey({ key: privateKey, format: 'pem' });
+
+  const payload: Record<string, string> = {
+    requestId: params.requestId || makeRequestId(),
+    merchantId,
+    vaAccount: String(params.vaAccount || '').trim(),
+  };
+
+  const tokenResp = await getAccessToken(process.env.HPAY_TOKEN_SCOPE || 'va', {
+    clientId: params.clientIdOverride,
+    clientSecret: params.clientSecretOverride,
+    mid: midForHeader,
+  });
+  if (!tokenResp.access_token) throw new Error('Không lấy được token VA');
+
+  const data = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64');
+  const signature = signRSASHA256(`${data}|${passcode}`, privateKey);
+  const headers = buildHeaders(`Bearer ${tokenResp.access_token}`, midForHeader);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ data, signature }),
+    signal: AbortSignal.timeout(getHttpTimeoutMs()),
+  });
+  const resData = (await res.json()) as { data?: string; errorCode?: string; errorMessage?: string };
+  let decoded: Record<string, unknown> | null = null;
+  try {
+    if (resData.data) {
+      const buf = Buffer.from(resData.data, 'base64');
+      decoded = JSON.parse(buf.toString('utf8')) as Record<string, unknown>;
+    }
+  } catch {
+    /* ignore */
+  }
+  return { raw: resData, decoded, requestId: payload.requestId };
+}
+
 export function getBankOverrides(bankCode: string | undefined) {
   const code = String(bankCode || '').trim().toUpperCase();
   if (code === 'MSB') {
