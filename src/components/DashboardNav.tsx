@@ -8,8 +8,8 @@ import { cn } from '@/lib/cn';
 const userLinks = [
   { href: '/dashboard', label: 'Tổng quan' },
   { href: '/dashboard/profile', label: 'Profile' },
-  { href: '/dashboard/va/new', label: 'Tạo VA' },
-  { href: '/dashboard/va', label: 'VA của tôi' },
+  { href: '/dashboard/va/new', label: 'Tạo Tên+STK' },
+  { href: '/dashboard/va', label: 'Tên+STK Đã Tạo' },
   { href: '/dashboard/withdraw', label: 'Rút tiền' },
   { href: '/dashboard/shop-bank', label: 'Shop bank' },
   { href: '/dashboard/ctv', label: 'Cộng tác viên' },
