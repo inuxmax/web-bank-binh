@@ -167,6 +167,9 @@ export default function DashboardCtvPage() {
                   >
                     Liên hệ tele phụ do tele chính bị khóa cấm chat: @lieunhuyen02
                   </a>
+                  <p className="mt-2 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700">
+                    ⚠️ Tính năng CTV đang code dở vẫn chưa xong, vui lòng chờ 1-2 ngày.
+                  </p>
                 </div>
               )}
             </div>
@@ -198,9 +201,6 @@ export default function DashboardCtvPage() {
                     {Number(data.paidCount || 0).toLocaleString('vi-VN')}
                   </p>
                 </div>
-              </div>
-              <div className="mt-3 rounded-lg border border-accent/25 bg-accent/10 px-3 py-2 text-sm text-accent">
-                Tỷ lệ hoa hồng hiện tại: <span className="font-semibold">{Number(data.ratePercent || 0)}%</span>
               </div>
             </div>
           </div>

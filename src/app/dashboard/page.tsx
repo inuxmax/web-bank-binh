@@ -61,6 +61,22 @@ export default async function DashboardPage() {
 
       {!isAdmin && (
         <>
+          <Card
+            className="mb-6 border-emerald-300/80 bg-gradient-to-r from-emerald-50 via-white to-sky-50 shadow-[0_18px_38px_-20px_rgba(16,185,129,0.85)]"
+            padding="lg"
+          >
+            <CardHeader>
+              <CardTitle className="text-emerald-800">🚀 Kết nối Telegram ngay</CardTitle>
+              <p className="mt-1 text-sm font-medium text-slate-700">
+                Dùng bot Sinpay trên điện thoại cùng tài khoản đăng nhập này (tạo VA, rút tiền, v.v.).
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Mở bot Telegram và bấm Start — không cần nhập mật khẩu trên Telegram (mã chỉ dùng một lần, hết hạn sau ~15 phút).
+              </p>
+            </CardHeader>
+            <TelegramConnectCard initialLinked={telegramLinked} />
+          </Card>
+
           <a
             href="https://t.me/+KGa5re77U0w2MDY9"
             target="_blank"
@@ -130,16 +146,6 @@ export default async function DashboardPage() {
               action={<ArrowLink href="/dashboard/va">Xem tất cả VA</ArrowLink>}
             />
           </div>
-
-          <Card className="mt-6" padding="lg">
-            <CardHeader>
-              <CardTitle>Telegram</CardTitle>
-              <p className="mt-1 text-sm text-slate-500">
-                Dùng bot Sinpay trên điện thoại cùng tài khoản đăng nhập này (tạo VA, rút tiền, v.v.).
-              </p>
-            </CardHeader>
-            <TelegramConnectCard initialLinked={telegramLinked} />
-          </Card>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-5">
             <Card className="lg:col-span-3" padding="lg">
