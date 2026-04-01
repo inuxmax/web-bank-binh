@@ -6,6 +6,8 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'edge') {
     return;
   }
+  const embeddedBotEnabled =
+    String(process.env.TELEGRAM_BOT_EMBEDDED_ENABLED || 'true').trim().toLowerCase() !== 'false';
   const pollEnabled = String(process.env.HPAY_UNPAID_POLLING_ENABLED || 'true').trim().toLowerCase() !== 'false';
   if (pollEnabled) {
     try {
@@ -14,6 +16,9 @@ export async function register() {
     } catch (e) {
       console.error('[instrumentation] VA sync poller:', e);
     }
+  }
+  if (!embeddedBotEnabled) {
+    return;
   }
   if (!process.env.TELEGRAM_BOT_TOKEN?.trim()) {
     return;

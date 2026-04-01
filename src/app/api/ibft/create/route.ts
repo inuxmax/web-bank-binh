@@ -33,8 +33,18 @@ export async function POST(req: Request) {
     const body = await req.json();
     const parsed = schema.parse(body);
     const code = parsed.bankCode.trim().toUpperCase();
-    /** Sinpay IBFT thường cần tên NH (label), không chỉ mã KLB/VCB… */
-    const bankName = (getIbftBankLabel(code) || code).trim();
+    const bankLabel = (getIbftBankLabel(code) || code).trim();
+    // Sinpay IBFT thường ổn định hơn khi gửi mã NH đích (VCB/TCB/...) thay vì tên hiển thị.
+    const bankName = code;
+    const accountNameNormalized = parsed.accountName
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Za-z0-9 ]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toUpperCase()
+      .slice(0, 100);
     const ov =
       parsed.sourceBank === 'MSB'
         ? {
@@ -58,7 +68,7 @@ export async function POST(req: Request) {
       bankCode: code,
       bankName,
       accountNumber: parsed.accountNumber.replace(/\D/g, '').slice(0, 24),
-      accountName: parsed.accountName.trim(),
+      accountName: accountNameNormalized,
       amount: parsed.amount,
       remark: parsed.remark,
       callbackUrl: String(process.env.IBFT_CALLBACK_URL || '').trim() || undefined,
@@ -69,7 +79,7 @@ export async function POST(req: Request) {
       adminId: session.userId,
       bankCode: parsed.bankCode,
       accountNumber: parsed.accountNumber,
-      accountName: parsed.accountName,
+      accountName: accountNameNormalized || parsed.accountName,
       amount: Number(parsed.amount),
       remark: parsed.remark,
       orderId: decoded && String((decoded as Record<string, unknown>).orderId || ''),
@@ -84,7 +94,21 @@ export async function POST(req: Request) {
         ? '214404: thường là từ chối nghiệp vụ — kiểm tra tên NH đích (đã gửi bankName), STK/tên chủ tài khoản, số tiền min/max theo chính sách, merchant đã bật IBFT/KLB; nếu chi KLB cần bộ client/MID KLB (HPAY_*_KLB) khớp kênh nguồn.'
         : undefined;
 
-    return NextResponse.json({ decoded, raw, requestId, hint: hint || bizHint, debug });
+    return NextResponse.json({
+      decoded,
+      raw,
+      requestId,
+      hint: hint || bizHint,
+      debug: {
+        ...debug,
+        normalized: {
+          bankCode: code,
+          bankLabel,
+          bankNameSent: bankName,
+          accountNameSent: accountNameNormalized,
+        },
+      },
+    });
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json({ error: 'Dữ liệu không hợp lệ', details: e.flatten() }, { status: 400 });

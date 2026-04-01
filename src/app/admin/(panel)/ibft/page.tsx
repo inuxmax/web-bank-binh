@@ -1,18 +1,67 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Card, FieldLabel, PageHeader, fieldInputClass, fieldSelectClass } from '@/components/ui';
+import { IBFT_BANKS } from '@/lib/banks';
+
+type WithdrawalItem = {
+  id?: string;
+  bankCode?: string;
+  bankName?: string;
+  bankAccount?: string;
+  bankHolder?: string;
+  amount?: number;
+  actualReceive?: number;
+  status?: string;
+  createdAt?: number;
+};
+
+function mapBankCodeFromName(bankName: string) {
+  const needle = String(bankName || '').trim().toLowerCase();
+  if (!needle) return '';
+  const exact = IBFT_BANKS.find((b) => b.name.toLowerCase() === needle);
+  if (exact) return exact.code;
+  const byContain = IBFT_BANKS.find(
+    (b) =>
+      b.name.toLowerCase().includes(needle) ||
+      needle.includes(b.name.toLowerCase()) ||
+      b.code.toLowerCase() === needle,
+  );
+  return byContain?.code || '';
+}
 
 export default function AdminIbftPage() {
   const [bankCode, setBankCode] = useState('');
+  const [bankKeyword, setBankKeyword] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
   const [amount, setAmount] = useState('');
   const [remark, setRemark] = useState('');
   const [sourceBank, setSourceBank] = useState<'MSB' | 'KLB' | ''>('');
-  const [statusOrderId, setStatusOrderId] = useState('');
+  const [withdrawals, setWithdrawals] = useState<WithdrawalItem[]>([]);
+  const [loadingWithdrawals, setLoadingWithdrawals] = useState(false);
   const [out, setOut] = useState('');
   const [loading, setLoading] = useState(false);
+  const bankOptions = IBFT_BANKS.filter((b) => {
+    const q = bankKeyword.trim().toLowerCase();
+    if (!q) return true;
+    return b.code.toLowerCase().includes(q) || b.name.toLowerCase().includes(q);
+  });
+
+  async function loadPendingWithdrawals() {
+    setLoadingWithdrawals(true);
+    try {
+      const res = await fetch('/api/admin/withdrawals?status=pending');
+      const j = await res.json();
+      setWithdrawals(Array.isArray(j.items) ? (j.items as WithdrawalItem[]) : []);
+    } finally {
+      setLoadingWithdrawals(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadPendingWithdrawals();
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,21 +87,17 @@ export default function AdminIbftPage() {
     }
   }
 
-  async function checkStatus(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setOut('');
-    try {
-      const res = await fetch('/api/ibft/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: statusOrderId }),
-      });
-      const j = await res.json();
-      setOut(JSON.stringify(j, null, 2));
-    } finally {
-      setLoading(false);
-    }
+  function pickWithdrawal(w: WithdrawalItem) {
+    const code = String(w.bankCode || '').trim().toUpperCase() || mapBankCodeFromName(String(w.bankName || ''));
+    const net = Number(w.actualReceive || 0);
+    const raw = Number(w.amount || 0);
+    const amountToUse = net > 0 ? net : raw;
+    setBankCode(code);
+    setBankKeyword('');
+    setAccountNumber(String(w.bankAccount || '').trim());
+    setAccountName(String(w.bankHolder || '').trim());
+    setAmount(amountToUse > 0 ? String(Math.floor(amountToUse)) : '');
+    setRemark(`Chi ho rut ${String(w.id || '').trim()}`.trim());
   }
 
   return (
@@ -80,13 +125,27 @@ export default function AdminIbftPage() {
             </div>
             <div>
               <FieldLabel>Mã NH đích</FieldLabel>
-              <input
-                placeholder="VCB, TCB…"
-                value={bankCode}
-                onChange={(e) => setBankCode(e.target.value.toUpperCase())}
-                className={fieldInputClass}
-                required
-              />
+              <div className="space-y-2">
+                <input
+                  placeholder="Tìm ngân hàng (VCB, Vietcombank...)"
+                  value={bankKeyword}
+                  onChange={(e) => setBankKeyword(e.target.value)}
+                  className={fieldInputClass}
+                />
+                <select
+                  value={bankCode}
+                  onChange={(e) => setBankCode(e.target.value.toUpperCase())}
+                  className={fieldSelectClass}
+                  required
+                >
+                  <option value="">-- Chọn ngân hàng đích --</option>
+                  {bankOptions.map((b) => (
+                    <option key={b.code} value={b.code}>
+                      {b.code} - {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div>
               <FieldLabel>Số tài khoản</FieldLabel>
@@ -116,21 +175,53 @@ export default function AdminIbftPage() {
         </Card>
 
         <Card padding="lg" variant="quiet">
-          <form onSubmit={checkStatus} className="space-y-5">
-            <h2 className="font-display text-lg font-semibold tracking-tight text-slate-900">Tra trạng thái</h2>
-            <div>
-              <FieldLabel>orderId</FieldLabel>
-              <input
-                placeholder="orderId"
-                value={statusOrderId}
-                onChange={(e) => setStatusOrderId(e.target.value)}
-                className={fieldInputClass}
-              />
+          <div className="space-y-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-lg font-semibold tracking-tight text-slate-900">Danh sách yêu cầu rút tiền</h2>
+              <Button type="button" variant="secondary" onClick={() => void loadPendingWithdrawals()} disabled={loadingWithdrawals}>
+                Làm mới
+              </Button>
             </div>
-            <Button type="submit" disabled={loading} variant="secondary">
-              Kiểm tra
-            </Button>
-          </form>
+            <p className="text-sm text-slate-500">Bấm chọn một yêu cầu để tự điền thông tin sang form chi hộ.</p>
+            <div className="max-h-[540px] space-y-3 overflow-auto pr-1">
+              {withdrawals.length === 0 ? (
+                <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                  {loadingWithdrawals ? 'Đang tải danh sách...' : 'Không có yêu cầu rút đang chờ.'}
+                </p>
+              ) : (
+                withdrawals.map((w, idx) => (
+                  <button
+                    key={String(w.id || `wd-${idx}`)}
+                    type="button"
+                    onClick={() => pickWithdrawal(w)}
+                    className="w-full rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/40 to-emerald-50/30 px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-slate-800">#{String(w.id || '—')}</p>
+                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                        Chờ duyệt
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs font-medium text-sky-700">
+                      {String(w.bankCode || mapBankCodeFromName(String(w.bankName || '')) || 'N/A')} · {String(w.bankName || 'N/A')}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      {String(w.bankAccount || 'N/A')} · {String(w.bankHolder || 'N/A')}
+                    </p>
+                    <p className="mt-2 text-xs">
+                      <span className="font-semibold text-rose-600">
+                        Số tiền: {Number(w.amount || 0).toLocaleString('vi-VN')}đ
+                      </span>
+                      <span className="mx-1.5 text-slate-400">·</span>
+                      <span className="font-semibold text-emerald-600">
+                        Thực nhận: {Number(w.actualReceive || 0).toLocaleString('vi-VN')}đ
+                      </span>
+                    </p>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
         </Card>
       </div>
 
