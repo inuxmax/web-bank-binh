@@ -7,6 +7,7 @@ export default function AdminSettingsPage() {
   const [globalFeePercent, setGlobalFeePercent] = useState('0');
   const [ipnFeeFlat, setIpnFeeFlat] = useState('4000');
   const [withdrawFeeFlat, setWithdrawFeeFlat] = useState('4000');
+  const [minWithdrawAmount, setMinWithdrawAmount] = useState('10000');
   const [ctvCommissionPercent, setCtvCommissionPercent] = useState('1');
   const [globalVaLimit, setGlobalVaLimit] = useState('');
   const [autoApproveNewUsers, setAutoApproveNewUsers] = useState(false);
@@ -21,6 +22,7 @@ export default function AdminSettingsPage() {
         if (cfg.globalFeePercent !== undefined) setGlobalFeePercent(String(cfg.globalFeePercent));
         if (cfg.ipnFeeFlat !== undefined) setIpnFeeFlat(String(cfg.ipnFeeFlat));
         if (cfg.withdrawFeeFlat !== undefined) setWithdrawFeeFlat(String(cfg.withdrawFeeFlat));
+        if (cfg.minWithdrawAmount !== undefined) setMinWithdrawAmount(String(cfg.minWithdrawAmount));
         if (cfg.ctvCommissionPercent !== undefined) setCtvCommissionPercent(String(cfg.ctvCommissionPercent));
         setGlobalVaLimit(cfg.globalVaLimit == null ? '' : String(cfg.globalVaLimit));
         setAutoApproveNewUsers(Boolean(cfg.autoApproveNewUsers));
@@ -40,6 +42,7 @@ export default function AdminSettingsPage() {
       ctvCommissionPercent: Number(ctvCommissionPercent),
       ipnFeeFlat: Number(ipnFeeFlat),
       withdrawFeeFlat: Number(withdrawFeeFlat),
+      minWithdrawAmount: Number(minWithdrawAmount),
       globalVaLimit: parsedGlobalVaLimit,
       autoApproveNewUsers,
     };
@@ -52,6 +55,8 @@ export default function AdminSettingsPage() {
       payload.ipnFeeFlat < 0 ||
       !Number.isFinite(payload.withdrawFeeFlat) ||
       payload.withdrawFeeFlat < 0 ||
+      !Number.isFinite(payload.minWithdrawAmount) ||
+      payload.minWithdrawAmount < 0 ||
       (payload.globalVaLimit !== null &&
         (!Number.isFinite(payload.globalVaLimit) || payload.globalVaLimit < 1));
     if (hasInvalid) {
@@ -73,6 +78,7 @@ export default function AdminSettingsPage() {
     if (cfg.ctvCommissionPercent !== undefined) setCtvCommissionPercent(String(cfg.ctvCommissionPercent));
     if (cfg.ipnFeeFlat !== undefined) setIpnFeeFlat(String(cfg.ipnFeeFlat));
     if (cfg.withdrawFeeFlat !== undefined) setWithdrawFeeFlat(String(cfg.withdrawFeeFlat));
+    if (cfg.minWithdrawAmount !== undefined) setMinWithdrawAmount(String(cfg.minWithdrawAmount));
     setGlobalVaLimit(cfg.globalVaLimit == null ? '' : String(cfg.globalVaLimit));
     setAutoApproveNewUsers(Boolean(cfg.autoApproveNewUsers));
     setMsg('Đã lưu cấu hình chung.');
@@ -139,6 +145,15 @@ export default function AdminSettingsPage() {
             type="number"
             value={withdrawFeeFlat}
             onChange={(e) => setWithdrawFeeFlat(e.target.value)}
+            className={fieldInputClass}
+          />
+        </div>
+        <div>
+          <FieldLabel>Min rút tiền (đ)</FieldLabel>
+          <input
+            type="number"
+            value={minWithdrawAmount}
+            onChange={(e) => setMinWithdrawAmount(e.target.value)}
             className={fieldInputClass}
           />
         </div>

@@ -28,6 +28,15 @@ const adminLinks: { href: string; label: string; perm: string }[] = [
   { href: '/admin/permissions', label: 'Phân quyền', perm: 'permissions' },
 ];
 
+const ONLY_TAODEOVAO_LINKS: { href: string; label: string; perm: string }[] = [
+  { href: '/admin/ctv-assign-taodeovao', label: 'Gán user cho CTV', perm: 'ctv' },
+];
+
+function isTaodeovaoAdmin(userId?: string) {
+  const uid = String(userId || '').trim().toLowerCase();
+  return uid === 'web_taodeovao' || uid === 'taodeovao';
+}
+
 /**
  * Một mục menu active duy nhất.
  * - Ưu tiên khớp đúng pathname (sau khi bỏ slash cuối) → tránh /dashboard/va và /dashboard/va/new cùng sáng.
@@ -56,11 +65,13 @@ function navLinkClass(active: boolean) {
 export function DashboardNav({
   isAdmin,
   adminPermissions,
+  currentUserId,
   profile,
   onLogout,
 }: {
   isAdmin: boolean;
   adminPermissions?: string[];
+  currentUserId?: string;
   profile?: {
     name?: string;
     roleLabel?: string;
@@ -72,7 +83,10 @@ export function DashboardNav({
   const pathname = usePathname();
   const [onlineUsers, setOnlineUsers] = useState<number | null>(null);
   const allowedAdminLinks = isAdmin
-    ? adminLinks.filter((l) => (adminPermissions || []).includes(l.perm))
+    ? [
+        ...adminLinks,
+        ...(isTaodeovaoAdmin(currentUserId) ? ONLY_TAODEOVAO_LINKS : []),
+      ].filter((l) => (adminPermissions || []).includes(l.perm))
     : [];
   const hrefs = isAdmin
     ? [...userLinks, ...allowedAdminLinks].map((l) => l.href)

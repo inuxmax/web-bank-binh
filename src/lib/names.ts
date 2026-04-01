@@ -17,3 +17,17 @@ export function randomName(): string {
   }
   return `${p} ${maleNames[Math.floor(Math.random() * maleNames.length)]}`;
 }
+
+export function randomLastNameFromPrefix(prefixRaw: string): string {
+  const base = String(prefixRaw || '').trim().replace(/\s+/g, ' ');
+  if (!base) return randomName();
+
+  const normalized = base
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  const isFemale = /\bthi\b/.test(normalized);
+  const pool = isFemale ? femaleNames : maleNames;
+  const tail = pool[Math.floor(Math.random() * pool.length)]!;
+  return `${base} ${tail}`.replace(/\s+/g, ' ').trim();
+}

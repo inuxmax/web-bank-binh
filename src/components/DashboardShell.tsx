@@ -7,11 +7,13 @@ export function DashboardShell({
   children,
   isAdmin,
   adminPermissions,
+  currentUserId,
   profile,
 }: {
   children: React.ReactNode;
   isAdmin: boolean;
   adminPermissions?: string[];
+  currentUserId?: string;
   profile?: {
     name?: string;
     roleLabel?: string;
@@ -33,6 +35,7 @@ export function DashboardShell({
       <DashboardNav
         isAdmin={isAdmin}
         adminPermissions={adminPermissions}
+        currentUserId={currentUserId}
         profile={profile}
         onLogout={logout}
       />

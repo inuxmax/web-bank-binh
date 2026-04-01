@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { randomName } from '@/lib/names';
+import { randomLastNameFromPrefix, randomName } from '@/lib/names';
 import { buildSepayQrUrlClient, displayVaBankClient } from '@/lib/va-display';
 import { Button, Card, CardHeader, CardTitle, FieldLabel, PageHeader, fieldInputClass, fieldSelectClass } from '@/components/ui';
 
@@ -17,6 +17,15 @@ export default function NewVaPage() {
     requestId: string;
     sepayUrl?: string;
   } | null>(null);
+
+  function randomizeName() {
+    const current = name.trim();
+    if (!current) {
+      setName(randomName());
+      return;
+    }
+    setName(randomLastNameFromPrefix(current));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,7 +84,7 @@ export default function NewVaPage() {
                     placeholder="Nguyen Van A"
                     required
                   />
-                  <Button type="button" variant="secondary" onClick={() => setName(randomName())} size="sm" className="shrink-0">
+                  <Button type="button" variant="secondary" onClick={randomizeName} size="sm" className="shrink-0">
                     Ngẫu nhiên
                   </Button>
                 </div>

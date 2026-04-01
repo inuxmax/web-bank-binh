@@ -281,6 +281,17 @@ export async function executeWithdrawalRequest(
     }
 
     const config = await db.getConfig();
+    const minWithdrawAmount = Math.max(
+      0,
+      Number((config as { minWithdrawAmount?: number }).minWithdrawAmount ?? 0) || 0,
+    );
+    if (parsed.amount < minWithdrawAmount) {
+      return {
+        ok: false,
+        error: `Số tiền rút tối thiểu là ${minWithdrawAmount.toLocaleString('vi-VN')}đ`,
+        status: 400,
+      };
+    }
     let feeFlat = Math.max(
       0,
       Number(

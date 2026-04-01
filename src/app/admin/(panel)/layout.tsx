@@ -20,6 +20,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
     <DashboardShell
       isAdmin
       adminPermissions={adminPermissions}
+      currentUserId={session.userId}
       profile={{
         name: u?.fullName || u?.username || u?.webLogin || 'Administrator',
         roleLabel: 'Admin',

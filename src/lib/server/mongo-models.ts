@@ -68,6 +68,7 @@ const AppConfigSchema = new Schema(
     globalFeePercent: { type: Number, default: 0 },
     ipnFeeFlat: { type: Number, default: 4000 },
     withdrawFeeFlat: { type: Number, default: 4000 },
+    minWithdrawAmount: { type: Number, default: 10000 },
     ctvCommissionPercent: { type: Number, default: 1 },
     globalVaLimit: { type: Schema.Types.Mixed, default: null },
     autoApproveNewUsers: { type: Boolean, default: false },
