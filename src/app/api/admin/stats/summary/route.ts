@@ -84,6 +84,9 @@ export async function GET(req: Request) {
       to: url.searchParams.get('to') || undefined,
     });
     const { fromTs, toTs } = getRange(parsed.preset, parsed.from, parsed.to);
+    const cfg = await db.getConfig();
+    const statsResetAt = Number((cfg as { statsResetAt?: number }).statsResetAt || 0) || 0;
+    const effectiveFromTs = Math.max(fromTs, statsResetAt);
 
     const [va, wd, users, userBalanceHistory] = await Promise.all([
       db.loadAll(),
@@ -93,14 +96,14 @@ export async function GET(req: Request) {
     ]);
 
     const primaryVa = va.filter((r) => !String((r as { parentRequestId?: string }).parentRequestId || '').trim());
-    const totalVaCreated = primaryVa.filter((r) => inRange((r as { createdAt?: number }).createdAt, fromTs, toTs)).length;
+    const totalVaCreated = primaryVa.filter((r) => inRange((r as { createdAt?: number }).createdAt, effectiveFromTs, toTs)).length;
 
     const totalTransactionAmount = (userBalanceHistory as Record<string, unknown>[])
       .filter((h) => {
         const reason = String(h.reason || '').toLowerCase();
         return reason === 'ipn' || reason === 'va_paid';
       })
-      .filter((h) => inRange(h.ts, fromTs, toTs))
+      .filter((h) => inRange(h.ts, effectiveFromTs, toTs))
       .reduce((sum, h) => {
         const delta = num(h.delta);
         return delta > 0 ? sum + delta : sum;
@@ -108,21 +111,29 @@ export async function GET(req: Request) {
 
     const totalIbftAmount = wd
       .filter((w) => String((w as { status?: string }).status || '') === 'done')
-      .filter((w) => inRange((w as { updatedAt?: number; createdAt?: number }).updatedAt || (w as { createdAt?: number }).createdAt, fromTs, toTs))
+      .filter((w) => inRange((w as { updatedAt?: number; createdAt?: number }).updatedAt || (w as { createdAt?: number }).createdAt, effectiveFromTs, toTs))
       .reduce((sum, w) => {
         const actual = num((w as { actualReceive?: number }).actualReceive);
         const amount = num((w as { amount?: number }).amount);
         return sum + (actual > 0 ? actual : amount);
       }, 0);
 
-    const totalUsers = users.filter((u) => inRange(u.registerAt, fromTs, toTs)).length;
-    const totalCtv = users.filter((u) => String(u.ctvStatus || '') === 'approved' && inRange(u.ctvApprovedAt, fromTs, toTs)).length;
+    const totalUsers = users.filter((u) => inRange(u.registerAt, effectiveFromTs, toTs)).length;
+    const totalCtv = users.filter((u) => String(u.ctvStatus || '') === 'approved' && inRange(u.ctvApprovedAt, effectiveFromTs, toTs)).length;
     const platformFeeAmount = Math.round(totalTransactionAmount * 0.03);
     const totalProfit = totalTransactionAmount - totalIbftAmount - platformFeeAmount;
 
     return NextResponse.json({
       ok: true,
-      range: { fromTs, toTs, preset: parsed.preset, from: parsed.from || '', to: parsed.to || '' },
+      range: {
+        fromTs,
+        toTs,
+        effectiveFromTs,
+        statsResetAt,
+        preset: parsed.preset,
+        from: parsed.from || '',
+        to: parsed.to || '',
+      },
       totals: {
         totalVaCreated,
         totalTransactionAmount,

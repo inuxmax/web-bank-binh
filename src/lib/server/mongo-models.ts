@@ -77,6 +77,7 @@ const AppConfigSchema = new Schema(
     autoApproveNewUsers: { type: Boolean, default: false },
     simRentApiToken: { type: String, default: '' },
     simRentMarkupPercent: { type: Number, default: 0 },
+    statsResetAt: { type: Number, default: 0 },
   },
   { collection: 'app_config' },
 );

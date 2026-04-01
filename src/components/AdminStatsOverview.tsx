@@ -27,6 +27,8 @@ export function AdminStatsOverview() {
   const [toDate, setToDate] = useState(ymdNow());
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [statsResetAt, setStatsResetAt] = useState(0);
   const [totals, setTotals] = useState<Totals>({
     totalVaCreated: 0,
     totalTransactionAmount: 0,
@@ -68,6 +70,7 @@ export function AdminStatsOverview() {
           platformFeeAmount: Number(j?.totals?.platformFeeAmount || 0),
           totalProfit: Number(j?.totals?.totalProfit || 0),
         });
+        setStatsResetAt(Number(j?.range?.statsResetAt || 0));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -77,6 +80,45 @@ export function AdminStatsOverview() {
       mounted = false;
     };
   }, [query]);
+
+  async function resetStats() {
+    const ok = window.confirm(
+      'Reset thống kê dashboard về mốc hiện tại? Dữ liệu gốc của user/giao dịch sẽ KHÔNG bị xóa.',
+    );
+    if (!ok) return;
+    setResetting(true);
+    try {
+      const res = await fetch('/api/admin/stats/reset', { method: 'POST' });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(String(j.error || 'Không thể reset thống kê'));
+        return;
+      }
+      setStatsResetAt(Number(j.statsResetAt || Date.now()));
+      setPreset((p) => p);
+      const q = new URLSearchParams({ preset });
+      if (preset === 'custom') {
+        q.set('from', fromDate);
+        q.set('to', toDate);
+      }
+      const r2 = await fetch(`/api/admin/stats/summary?${q.toString()}`, { cache: 'no-store' });
+      const d2 = await r2.json().catch(() => ({}));
+      if (r2.ok) {
+        setTotals({
+          totalVaCreated: Number(d2?.totals?.totalVaCreated || 0),
+          totalTransactionAmount: Number(d2?.totals?.totalTransactionAmount || 0),
+          totalIbftAmount: Number(d2?.totals?.totalIbftAmount || 0),
+          totalUsers: Number(d2?.totals?.totalUsers || 0),
+          totalCtv: Number(d2?.totals?.totalCtv || 0),
+          platformFeeAmount: Number(d2?.totals?.platformFeeAmount || 0),
+          totalProfit: Number(d2?.totals?.totalProfit || 0),
+        });
+        setErr('');
+      }
+    } finally {
+      setResetting(false);
+    }
+  }
 
   return (
     <div className="mb-5 space-y-4">
@@ -118,7 +160,21 @@ export function AdminStatsOverview() {
             />
           </div>
         ) : null}
+        <button
+          type="button"
+          onClick={() => void resetStats()}
+          disabled={resetting}
+          className="rounded-[var(--radius-app)] border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+        >
+          {resetting ? 'Đang reset...' : 'Reset thống kê'}
+        </button>
       </div>
+
+      {statsResetAt > 0 ? (
+        <p className="text-xs text-slate-500">
+          Mốc reset hiện tại: {new Date(statsResetAt).toLocaleString('vi-VN')}
+        </p>
+      ) : null}
 
       {err ? <p className="text-sm text-rose-500">{err}</p> : null}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
