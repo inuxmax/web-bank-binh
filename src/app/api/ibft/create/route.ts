@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     const hint = hpaySignatureHint(raw);
     const bizHint =
       String(raw.errorCode || '') === '214404'
-        ? '214404 (sandbox): thường là từ chối nghiệp vụ — kiểm tra tên NH đích (đã gửi bankName), STK/tên chủ khớp test Sinpay, số tiền min/max sandbox, merchant đã bật IBFT/KLB; nếu chi KLB cần bộ client/MID KLB (HPAY_*_KLB) khớp kênh nguồn.'
+        ? '214404: thường là từ chối nghiệp vụ — kiểm tra tên NH đích (đã gửi bankName), STK/tên chủ tài khoản, số tiền min/max theo chính sách, merchant đã bật IBFT/KLB; nếu chi KLB cần bộ client/MID KLB (HPAY_*_KLB) khớp kênh nguồn.'
         : undefined;
 
     return NextResponse.json({ decoded, raw, requestId, hint: hint || bizHint, debug });

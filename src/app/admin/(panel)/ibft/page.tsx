@@ -1,37 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Card, FieldLabel, PageHeader, fieldInputClass, fieldSelectClass } from '@/components/ui';
 
 export default function AdminIbftPage() {
-  const [bankCode, setBankCode] = useState('VCB');
+  const [bankCode, setBankCode] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
   const [amount, setAmount] = useState('');
   const [remark, setRemark] = useState('');
-  const [sourceBank, setSourceBank] = useState<'MSB' | 'KLB' | ''>('MSB');
+  const [sourceBank, setSourceBank] = useState<'MSB' | 'KLB' | ''>('');
   const [statusOrderId, setStatusOrderId] = useState('');
   const [out, setOut] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/admin/ibft-test-env')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: Record<string, string> | null) => {
-        if (!d || cancelled) return;
-        if (d.bankCode) setBankCode(String(d.bankCode).toUpperCase());
-        if (d.accountNumber) setAccountNumber(d.accountNumber);
-        if (d.accountName) setAccountName(d.accountName);
-        if (d.sourceBankHint === 'KLB' || d.sourceBankHint === 'MSB') {
-          setSourceBank(d.sourceBankHint);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -79,7 +60,7 @@ export default function AdminIbftPage() {
       <PageHeader
         eyebrow="Sinpay API"
         title="Chi hộ IBFT"
-        description="Firm transfer — client/secret/pass theo kênh MSB/KLB như bot. Form tự lấy STK test từ HPAY_IBFT_TEST_* trong .env.local (admin)."
+        description="Firm transfer môi trường thật. Nhập trực tiếp thông tin người nhận và chọn kênh nguồn theo cấu hình thật."
       />
 
       <div className="grid gap-8 lg:grid-cols-2">
@@ -94,7 +75,7 @@ export default function AdminIbftPage() {
               >
                 <option value="MSB">MSB</option>
                 <option value="KLB">KLB</option>
-                <option value="">Mặc định .env</option>
+                <option value="">Mặc định merchant chính</option>
               </select>
             </div>
             <div>
