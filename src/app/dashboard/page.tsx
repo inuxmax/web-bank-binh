@@ -75,6 +75,28 @@ export default async function DashboardPage() {
               <p className="mt-2 text-sm font-medium text-accent group-hover:underline">
                 Vào nhóm ngay: https://t.me/+KGa5re77U0w2MDY9
               </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Liên hệ admin Telegram:{' '}
+                <a
+                  href="https://t.me/lieunhuyenbet"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-accent hover:underline"
+                >
+                  @lieunhuyenbet
+                </a>
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Liên hệ tele phụ do tele chính bị khóa cấm chat:{' '}
+                <a
+                  href="https://t.me/lieunhuyen02"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-accent hover:underline"
+                >
+                  @lieunhuyen02
+                </a>
+              </p>
             </div>
           </a>
 
