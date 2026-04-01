@@ -36,6 +36,7 @@ function defaultUserRecord(id: string): UserRecord {
     ctvStatus: 'none',
     adminPermissions: [],
     ctvRatePercent: null,
+    ctvCustomerFeePercent: null,
     ctvCommissionTotal: 0,
     ctvCommissionCount: 0,
   };

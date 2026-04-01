@@ -37,6 +37,7 @@ export type UserRecord = {
   referredByCode?: string;
   referredByUserId?: string;
   ctvRatePercent?: number | null;
+  ctvCustomerFeePercent?: number | null;
   ctvAppliedAt?: number;
   ctvApprovedAt?: number;
   ctvCommissionTotal?: number;

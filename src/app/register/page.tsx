@@ -9,12 +9,14 @@ import { Button, Card, FieldLabel, fieldInputClass } from '@/components/ui';
 function RegisterPageClient() {
   const router = useRouter();
   const search = useSearchParams();
+  const referralFromLink = String(search.get('ref') || '').trim();
+  const isReferralLocked = referralFromLink.length > 0;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [referralCode, setReferralCode] = useState(search.get('ref') || '');
+  const [referralCode, setReferralCode] = useState(referralFromLink);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,7 +33,15 @@ function RegisterPageClient() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, fullName, phone, email, referralCode, agreedTerms }),
+        body: JSON.stringify({
+          username,
+          password,
+          fullName,
+          phone,
+          email,
+          referralCode: isReferralLocked ? referralFromLink : referralCode,
+          agreedTerms,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -93,9 +103,14 @@ function RegisterPageClient() {
               <input
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value)}
-                className={fieldInputClass}
+                className={`${fieldInputClass} ${isReferralLocked ? 'cursor-not-allowed bg-slate-100 text-slate-500' : ''}`}
                 placeholder="Nhập mã CTV"
+                readOnly={isReferralLocked}
+                disabled={isReferralLocked}
               />
+              {isReferralLocked ? (
+                <p className="mt-1 text-xs text-slate-500">Mã CTV được áp dụng từ link giới thiệu và không thể chỉnh sửa.</p>
+              ) : null}
             </div>
             <div>
               <FieldLabel>Tên đăng nhập</FieldLabel>

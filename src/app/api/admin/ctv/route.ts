@@ -37,6 +37,7 @@ export async function GET() {
       commissionTotal: Number(u.ctvCommissionTotal || 0),
       commissionCount: Number(u.ctvCommissionCount || 0),
       userRatePercent: u.ctvRatePercent == null ? null : Number(u.ctvRatePercent),
+      customerFeePercent: u.ctvCustomerFeePercent == null ? null : Number(u.ctvCustomerFeePercent),
       ratePercent: Number(
         u.ctvRatePercent ??
           (Number.isFinite(cfgRate) ? cfgRate : undefined) ??
@@ -53,8 +54,9 @@ export async function GET() {
 
 const patchSchema = z.object({
   id: z.string().min(1),
-  action: z.enum(['approve', 'reject', 'set_rate']),
+  action: z.enum(['approve', 'reject', 'set_rate', 'set_customer_fee']),
   ratePercent: z.number().min(0).max(100).nullable().optional(),
+  customerFeePercent: z.number().min(0).max(100).nullable().optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -70,7 +72,7 @@ export async function PATCH(req: Request) {
   }
   try {
     const body = await req.json();
-    const { id, action, ratePercent } = patchSchema.parse(body);
+    const { id, action, ratePercent, customerFeePercent } = patchSchema.parse(body);
     const user = await db.findUser(id);
     const cfg = await db.getConfig();
     const cfgRate = Number((cfg as { ctvCommissionPercent?: number }).ctvCommissionPercent);
@@ -90,14 +92,35 @@ export async function PATCH(req: Request) {
                   1,
               ),
       });
+      const fresh = await db.getUser(id);
+      const ctvCustomerFee =
+        fresh.ctvCustomerFeePercent !== null && fresh.ctvCustomerFeePercent !== undefined
+          ? Number(fresh.ctvCustomerFeePercent)
+          : NaN;
+      if (Number.isFinite(ctvCustomerFee) && ctvCustomerFee >= 0) {
+        const users = await db.getAllUsers();
+        for (const x of users) {
+          if (String(x.referredByUserId || '') !== id) continue;
+          await db.updateUser(x.id, { feePercent: ctvCustomerFee });
+        }
+      }
     } else if (action === 'reject') {
       await db.updateUser(id, {
         ctvStatus: 'rejected',
       });
-    } else {
+    } else if (action === 'set_rate') {
       await db.updateUser(id, {
         ctvRatePercent: ratePercent ?? null,
       });
+    } else {
+      await db.updateUser(id, {
+        ctvCustomerFeePercent: customerFeePercent ?? null,
+      });
+      const users = await db.getAllUsers();
+      for (const x of users) {
+        if (String(x.referredByUserId || '') !== id) continue;
+        await db.updateUser(x.id, { feePercent: customerFeePercent ?? null });
+      }
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

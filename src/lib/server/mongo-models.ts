@@ -40,6 +40,7 @@ const UserSchema = new Schema(
     referredByCode: String,
     referredByUserId: String,
     ctvRatePercent: { type: Schema.Types.Mixed, default: null },
+    ctvCustomerFeePercent: { type: Schema.Types.Mixed, default: null },
     ctvAppliedAt: Number,
     ctvApprovedAt: Number,
     ctvCommissionTotal: { type: Number, default: 0 },

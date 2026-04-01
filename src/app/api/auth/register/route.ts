@@ -79,12 +79,22 @@ export async function POST(req: Request) {
     const passwordHash = await bcrypt.hash(password, 10);
     const ownerCode = await generateUniqueReferralCode();
     let referredByUserId = '';
+    let feePercentByCtv: number | null = null;
     if (effectiveReferralCode) {
       const owner = await db.findUserByCtvCode(effectiveReferralCode);
       if (!owner && normalizedReferral && normalizedReferral !== defaultReferralCode) {
         return NextResponse.json({ error: 'Mã CTV không tồn tại' }, { status: 400 });
       }
-      if (owner && owner.id !== id) referredByUserId = owner.id;
+      if (owner && owner.id !== id) {
+        referredByUserId = owner.id;
+        const ownerCustomerFee =
+          owner.ctvCustomerFeePercent !== null && owner.ctvCustomerFeePercent !== undefined
+            ? Number(owner.ctvCustomerFeePercent)
+            : NaN;
+        if (owner.ctvStatus === 'approved' && Number.isFinite(ownerCustomerFee) && ownerCustomerFee >= 0) {
+          feePercentByCtv = ownerCustomerFee;
+        }
+      }
     }
     await db.updateUser(id, {
       webLogin,
@@ -101,6 +111,7 @@ export async function POST(req: Request) {
       ctvCode: ownerCode,
       referredByCode: effectiveReferralCode || undefined,
       referredByUserId: referredByUserId || undefined,
+      feePercent: feePercentByCtv,
     });
 
     const session = await getSession();

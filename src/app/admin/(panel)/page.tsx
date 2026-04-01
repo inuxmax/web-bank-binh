@@ -7,6 +7,7 @@ import {
   getSessionAdminPermissions,
 } from '@/lib/server/admin-permissions';
 import { getVaSyncStatus } from '@/lib/server/va-sync-poller';
+import { AdminStatsOverview } from '@/components/AdminStatsOverview';
 
 export default async function AdminHomePage() {
   const session = await getSession();
@@ -45,6 +46,7 @@ export default async function AdminHomePage() {
         title="Quản trị"
         description="Các module tương ứng bot Telegram — OAuth, RSA và dữ liệu dùng chung với web."
       />
+      <AdminStatsOverview />
       <div className="grid gap-4 sm:grid-cols-2">
         {visibleCards.map((c) => (
           <Link
@@ -71,8 +73,7 @@ export default async function AdminHomePage() {
       </div>
       <p className="mt-12 rounded-[var(--radius-app)] border border-slate-200/90 bg-surface-2/60 px-4 py-3 text-xs text-slate-600">
         Callback IPN:{' '}
-        <code className="font-mono text-accent">{callbackUrl}</code> — ưu tiên cấu hình bằng biến môi trường{' '}
-        <code className="font-mono text-accent">HPAY_CALLBACK_BASE_URL</code> để tách domain callback riêng.
+        <code className="font-mono text-accent">{callbackUrl}</code>
       </p>
     </div>
   );

@@ -13,6 +13,7 @@ type Row = {
   commissionTotal: number;
   commissionCount: number;
   userRatePercent: number | null;
+  customerFeePercent: number | null;
   ratePercent: number;
   ctvAppliedAt: number;
   ctvApprovedAt: number;
@@ -95,6 +96,38 @@ export default function AdminCtvPage() {
     await load();
   }
 
+  async function setCustomerFee(r: Row) {
+    const val = await popup.prompt({
+      title: `Set % khách theo CTV - ${r.id}`,
+      message: 'Nhập từ 0 đến 100. Để trống để bỏ set riêng cho khách.',
+      defaultValue: r.customerFeePercent == null ? '' : String(r.customerFeePercent),
+      placeholder: 'Ví dụ: 15',
+    });
+    if (val === null) return;
+    const raw = String(val || '').trim();
+    let customerFeePercent: number | null = null;
+    if (raw !== '') {
+      const n = Number(raw.replace(/[^\d.]/g, ''));
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        await popup.alert('% khách không hợp lệ (0-100)');
+        return;
+      }
+      customerFeePercent = n;
+    }
+    const res = await fetch('/api/admin/ctv', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: r.id, action: 'set_customer_fee', customerFeePercent }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await popup.alert(String(d.error || 'Lưu % khách thất bại'));
+      return;
+    }
+    await popup.alert('Đã cập nhật % khách cho CTV và áp dụng cho user được giới thiệu.');
+    await load();
+  }
+
   return (
     <div>
       <popup.PopupHost />
@@ -151,6 +184,7 @@ export default function AdminCtvPage() {
                         <th className="p-3">Thu nhập</th>
                         <th className="p-3">Số lượt</th>
                         <th className="p-3">Tỷ lệ</th>
+                        <th className="p-3">% khách</th>
                         <th className="p-3">Đăng ký</th>
                         <th className="p-3">Duyệt</th>
                         <th className="p-3">Thao tác</th>
@@ -174,6 +208,10 @@ export default function AdminCtvPage() {
                               {r.userRatePercent == null ? 'Theo global' : 'Set riêng'}
                             </div>
                           </td>
+                          <td className="p-3">
+                            <div>{r.customerFeePercent == null ? '—' : `${Number(r.customerFeePercent)}%`}</div>
+                            <div className="text-[11px] text-slate-500">Phí user được giới thiệu</div>
+                          </td>
                           <td className="p-3 text-xs">{fmtTs(r.ctvAppliedAt)}</td>
                           <td className="p-3 text-xs">{fmtTs(r.ctvApprovedAt)}</td>
                           <td className="p-3">
@@ -184,6 +222,13 @@ export default function AdminCtvPage() {
                                 className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
                               >
                                 Set %
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void setCustomerFee(r)}
+                                className="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700"
+                              >
+                                Set % khách
                               </button>
                               {r.ctvStatus !== 'approved' ? (
                                 <button
