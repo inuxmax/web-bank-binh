@@ -28,16 +28,23 @@ export async function GET(req: Request) {
   const klbMerchant = String(process.env.HPAY_MERCHANT_ID_KLB || '').trim();
   const msbMid = String(process.env.HPAY_X_API_MID_MSB || '').trim();
   const klbMid = String(process.env.HPAY_X_API_MID_KLB || '').trim();
-  const passcode =
+  const passcodeByMerchant =
     merchantId && (merchantId === msbMerchant || merchantId === msbMid)
       ? String(process.env.HPAY_PASSCODE_MSB || '').trim()
       : merchantId && (merchantId === klbMerchant || merchantId === klbMid)
         ? String(process.env.HPAY_PASSCODE_KLB || '').trim()
         : String(process.env.HPAY_PASSCODE || '').trim();
-
-  const clear = `${vaAccount}|${amount}|${cashinId}|${transactionId}|${passcode}|${clientRequestId}|${merchantId}`;
-  const expected = md5Hex(clear);
-  const ok = Boolean(secureCode && expected === secureCode);
+  const passcodeCandidates = [
+    passcodeByMerchant,
+    String(process.env.HPAY_PASSCODE_MSB || '').trim(),
+    String(process.env.HPAY_PASSCODE_KLB || '').trim(),
+    String(process.env.HPAY_PASSCODE || '').trim(),
+  ].filter(Boolean);
+  const uniqPasscodes = [...new Set(passcodeCandidates)];
+  const expectedCodes = uniqPasscodes.map((p) =>
+    md5Hex(`${vaAccount}|${amount}|${cashinId}|${transactionId}|${p}|${clientRequestId}|${merchantId}`),
+  );
+  const ok = Boolean(secureCode && expectedCodes.includes(secureCode));
 
   let transferContent = '';
   try {
