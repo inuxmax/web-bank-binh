@@ -434,6 +434,25 @@ function appUrl() {
   );
 }
 
+function publicWebsiteUrl() {
+  return String(process.env.PUBLIC_WEBSITE_URL || 'https://thuebank.net').trim();
+}
+
+function renderPendingApproveStartMessage(u: db.UserRecord) {
+  const name = String(u.fullName || u.username || u.webLogin || '').trim() || '—';
+  return [
+    '🔐 TÀI KHOẢN CHƯA ĐƯỢC DUYỆT!',
+    '',
+    `🆔 User ID của bạn: ${u.id}`,
+    `👤 Tên: ${name}`,
+    '',
+    '📋 Hướng dẫn:',
+    `1) Truy cập website: ${publicWebsiteUrl()}`,
+    '2) Đăng nhập và theo dõi trạng thái duyệt tài khoản',
+    '3) Chờ admin duyệt, bot sẽ thông báo tự động',
+  ].join('\n');
+}
+
 const BOT_LAUNCH_KEY = '__hpayTelegramBotLaunch' as const;
 
 export type StartTelegramBotOptions = {
@@ -468,10 +487,23 @@ async function runTelegramBotImpl(options: StartTelegramBotOptions): Promise<voi
 
   bot.start(async (ctx) => {
     resetFlow(sess(ctx.chat!.id));
+    const tid = ctx.from?.id;
+    if (tid) {
+      const linked = await linkedUser(tid);
+      if (linked && !linked.isActive) {
+        await ctx.reply(renderPendingApproveStartMessage(linked));
+        return;
+      }
+    }
     const payload = String(ctx.payload || (ctx as { startPayload?: string }).startPayload || '').trim();
     if (payload) {
       const r = await db.redeemTelegramDeepLink(payload, String(ctx.from?.id || ''));
       if (r.ok) {
+        const linked = await linkedUser(Number(ctx.from?.id || 0));
+        if (linked && !linked.isActive) {
+          await ctx.reply(renderPendingApproveStartMessage(linked));
+          return;
+        }
         await ctx.reply(
           '✅ Đã kết nối Telegram với tài khoản web. Bạn có thể dùng các nút bên dưới.',
           mainKeyboard(Markup),
