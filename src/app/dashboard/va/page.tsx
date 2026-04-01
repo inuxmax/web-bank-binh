@@ -35,6 +35,9 @@ export default function VaListPage() {
   const popup = useAppPopup();
   const [items, setItems] = useState<Row[]>([]);
   const [searchVaAccount, setSearchVaAccount] = useState('');
+  const [feeInfo, setFeeInfo] = useState<{ feePercent: number; ipnFeeFlat: number; withdrawFeeFlat: number } | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [qrModal, setQrModal] = useState<{ url: string; vaAccount: string } | null>(null);
@@ -44,9 +47,20 @@ export default function VaListPage() {
   useEffect(() => {
     setLoading(true);
     setPage(1);
-    fetch('/api/va/list?limit=100')
-      .then((r) => r.json())
-      .then((d) => setItems(d.items || []))
+    Promise.all([fetch('/api/va/list?limit=100'), fetch('/api/me')])
+      .then(async ([vaRes, meRes]) => {
+        const vaJson = await vaRes.json();
+        setItems(vaJson.items || []);
+        const meJson = await meRes.json();
+        const u = (meJson && meJson.user) || {};
+        if (u && typeof u === 'object') {
+          setFeeInfo({
+            feePercent: Number(u.feePercent || 0),
+            ipnFeeFlat: Number(u.ipnFeeFlat || 0),
+            withdrawFeeFlat: Number(u.withdrawFeeFlat || 0),
+          });
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -123,20 +137,43 @@ export default function VaListPage() {
         title="VA đã tạo"
         description="Danh sách gần nhất."
       />
-      <Card padding="md" className="mb-6 max-w-md">
-        <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-          Tìm kiếm
-        </label>
-        <input
-          value={searchVaAccount}
-          onChange={(e) => {
-            setSearchVaAccount(e.target.value.replace(/[^\d]/g, ''));
-            setPage(1);
-          }}
-          className="mt-2 w-full rounded-[var(--radius-app)] border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm"
-          placeholder="Nhập STK VA đã tạo..."
-        />
-      </Card>
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        <Card padding="md">
+          <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+            Tìm kiếm
+          </label>
+          <input
+            value={searchVaAccount}
+            onChange={(e) => {
+              setSearchVaAccount(e.target.value.replace(/[^\d]/g, ''));
+              setPage(1);
+            }}
+            className="mt-2 w-full rounded-[var(--radius-app)] border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm"
+            placeholder="Nhập STK VA đã tạo..."
+          />
+        </Card>
+        <Card padding="md" variant="quiet">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Phí áp dụng</p>
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-500">% Rút</p>
+              <p className="text-sm font-semibold text-amber-700">{Number(feeInfo?.feePercent || 0)}%</p>
+            </div>
+            <div className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-500">Phí giao dịch</p>
+              <p className="text-sm font-semibold text-rose-700">
+                {Number(feeInfo?.ipnFeeFlat || 0).toLocaleString('vi-VN')} đ
+              </p>
+            </div>
+            <div className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-500">Phí chuyển tiền</p>
+              <p className="text-sm font-semibold text-emerald-700">
+                {Number(feeInfo?.withdrawFeeFlat || 0).toLocaleString('vi-VN')} đ
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
       {loading ? (
         <p className="text-sm text-slate-500">Đang tải…</p>
       ) : items.length === 0 ? (
