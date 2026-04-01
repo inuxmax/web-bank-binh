@@ -17,6 +17,25 @@ type WithdrawalItem = {
   createdAt?: number;
 };
 
+type IbftHistoryItem = {
+  ts?: number;
+  bankCode?: string;
+  accountNumber?: string;
+  accountName?: string;
+  amount?: number;
+  orderId?: string;
+  tranStatus?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  remark?: string;
+};
+
+type IbftSubmitResult = {
+  ok: boolean;
+  title: string;
+  detail: string;
+};
+
 function mapBankCodeFromName(bankName: string) {
   const needle = String(bankName || '').trim().toLowerCase();
   if (!needle) return '';
@@ -42,7 +61,9 @@ export default function AdminIbftPage() {
   const [withdrawals, setWithdrawals] = useState<WithdrawalItem[]>([]);
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalItem | null>(null);
   const [loadingWithdrawals, setLoadingWithdrawals] = useState(false);
-  const [out, setOut] = useState('');
+  const [result, setResult] = useState<IbftSubmitResult | null>(null);
+  const [history, setHistory] = useState<IbftHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [loading, setLoading] = useState(false);
   const bankOptions = IBFT_BANKS.filter((b) => {
     const q = bankKeyword.trim().toLowerCase();
@@ -63,12 +84,24 @@ export default function AdminIbftPage() {
 
   useEffect(() => {
     void loadPendingWithdrawals();
+    void loadHistory();
   }, []);
+
+  async function loadHistory() {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch('/api/admin/ibft-history?limit=30');
+      const j = await res.json().catch(() => ({}));
+      setHistory(Array.isArray(j.items) ? (j.items as IbftHistoryItem[]) : []);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setOut('');
+    setResult(null);
     try {
       const res = await fetch('/api/ibft/create', {
         method: 'POST',
@@ -85,11 +118,27 @@ export default function AdminIbftPage() {
         }),
       });
       const j = await res.json();
-      setOut(JSON.stringify(j, null, 2));
+      const code = String(j?.raw?.errorCode || '').trim();
+      const msg = String(j?.raw?.errorMessage || '').trim();
+      const ibftOk = code === '00' || String(j?.autoHandled?.status || '') === 'done';
+      if (ibftOk) {
+        setResult({
+          ok: true,
+          title: 'Đã chi hộ thành công',
+          detail: `Mã phản hồi: ${code || '00'}${msg ? ` · ${msg}` : ''}`,
+        });
+      } else {
+        setResult({
+          ok: false,
+          title: 'Chi hộ thất bại',
+          detail: `${code || 'N/A'}${msg ? ` · ${msg}` : ''}`,
+        });
+      }
       if (j?.autoHandled?.updated) {
         setSelectedWithdrawal(null);
         await loadPendingWithdrawals();
       }
+      await loadHistory();
     } finally {
       setLoading(false);
     }
@@ -185,6 +234,18 @@ export default function AdminIbftPage() {
             <Button type="submit" disabled={loading}>
               Gửi chi hộ
             </Button>
+            {result ? (
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm ${
+                  result.ok
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-rose-200 bg-rose-50 text-rose-700'
+                }`}
+              >
+                <p className="font-semibold">{result.title}</p>
+                <p className="mt-1 text-xs">{result.detail}</p>
+              </div>
+            ) : null}
           </form>
         </Card>
 
@@ -244,11 +305,64 @@ export default function AdminIbftPage() {
         </Card>
       </div>
 
-      {out ? (
-        <pre className="mt-8 max-h-96 overflow-auto rounded-[var(--radius-app-lg)] border border-slate-200 bg-surface-2/90 p-5 font-mono text-xs leading-relaxed text-slate-700 shadow-inner-glow">
-          {out}
-        </pre>
-      ) : null}
+      <Card padding="lg" className="mt-8">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-semibold tracking-tight text-slate-900">Lịch sử chi hộ gần nhất</h3>
+            <p className="text-xs text-slate-500">Hiển thị mã lỗi, nội dung lỗi, trạng thái và thông tin tài khoản nhận.</p>
+          </div>
+          <Button type="button" variant="secondary" onClick={() => void loadHistory()} disabled={loadingHistory}>
+            Làm mới
+          </Button>
+        </div>
+        <div className="mt-4 space-y-3">
+          {history.length === 0 ? (
+            <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+              {loadingHistory ? 'Đang tải lịch sử...' : 'Chưa có lịch sử chi hộ.'}
+            </p>
+          ) : (
+            history.map((it, idx) => {
+              const code = String(it.errorCode || '');
+              const isOk = code === '00';
+              return (
+                <div
+                  key={`${String(it.ts || 0)}-${idx}`}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                      {Number(it.ts) > 0 ? new Date(Number(it.ts)).toLocaleString('vi-VN') : '—'}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 font-semibold ${
+                        isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                      }`}
+                    >
+                      {isOk ? 'Thành công' : 'Thất bại'}
+                    </span>
+                    <span className="rounded-full bg-sky-100 px-2 py-0.5 font-medium text-sky-700">
+                      Code: {code || 'N/A'}
+                    </span>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">
+                      {String(it.tranStatus || 'N/A')}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-slate-800">
+                    {String(it.bankCode || 'N/A')} • {String(it.accountNumber || 'N/A')} ({String(it.accountName || 'N/A')})
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Số tiền: <span className="font-semibold text-accent">{Number(it.amount || 0).toLocaleString('vi-VN')}đ</span>
+                    {' · '}Order: <span className="font-mono text-xs">{String(it.orderId || '—')}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Ghi chú: {String(it.remark || '—')} {' · '}Phản hồi: {String(it.errorMessage || '—')}
+                  </p>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

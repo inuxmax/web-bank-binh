@@ -18,6 +18,9 @@ export default function WithdrawPage() {
   const [bankHolder, setBankHolder] = useState('');
   const [amount, setAmount] = useState('');
   const [saved, setSaved] = useState<SavedWithdrawAccount[]>([]);
+  const [feeInfo, setFeeInfo] = useState<{ feePercent: number; ipnFeeFlat: number; withdrawFeeFlat: number } | null>(
+    null,
+  );
   const [savedLoading, setSavedLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,6 +42,28 @@ export default function WithdrawPage() {
         setSaved(Array.isArray(data.items) ? data.items : []);
       } finally {
         if (mounted) setSavedLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    void (async () => {
+      try {
+        const res = await fetch('/api/me');
+        const data = await res.json().catch(() => ({}));
+        const user = (data && data.user) || {};
+        if (!mounted || !user || typeof user !== 'object') return;
+        setFeeInfo({
+          feePercent: Number(user.feePercent || 0),
+          ipnFeeFlat: Number(user.ipnFeeFlat || 0),
+          withdrawFeeFlat: Number(user.withdrawFeeFlat || 0),
+        });
+      } catch {
+        // ignore
       }
     })();
     return () => {
@@ -90,6 +115,30 @@ export default function WithdrawPage() {
         title="Rút tiền"
         description="Số dư sẽ bị trừ ngay khi gửi; admin duyệt lệnh ở trang quản trị."
       />
+
+      <div className="mb-6">
+        <Card padding="md" variant="quiet" className="max-w-[560px]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Phí áp dụng</p>
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-500">% Phí rút</p>
+              <p className="text-sm font-semibold text-amber-700">{Number(feeInfo?.feePercent || 0)}%</p>
+            </div>
+            <div className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-500">Phí giao dịch</p>
+              <p className="text-sm font-semibold text-rose-700">
+                {Number(feeInfo?.ipnFeeFlat || 0).toLocaleString('vi-VN')} đ
+              </p>
+            </div>
+            <div className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2">
+              <p className="text-[11px] text-slate-500">Phí rút cố định</p>
+              <p className="text-sm font-semibold text-emerald-700">
+                {Number(feeInfo?.withdrawFeeFlat || 0).toLocaleString('vi-VN')} đ
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,560px)_minmax(280px,1fr)]">
         <Card padding="lg">
