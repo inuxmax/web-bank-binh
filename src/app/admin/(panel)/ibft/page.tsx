@@ -132,6 +132,8 @@ export default function AdminIbftPage() {
           title: 'Đã chi hộ thành công',
           detail: `Mã phản hồi: ${code || '00'}${msg ? ` · ${msg}` : ''}`,
         });
+        setSelectedWithdrawal(null);
+        await loadPendingWithdrawals();
       } else {
         setResult({
           ok: false,
@@ -141,7 +143,6 @@ export default function AdminIbftPage() {
       }
       if (j?.autoHandled?.updated) {
         setSelectedWithdrawal(null);
-        await loadPendingWithdrawals();
       }
       await loadHistory();
     } finally {
