@@ -24,13 +24,24 @@ export default async function PendingPage() {
           </CardHeader>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900">Tài khoản đang chờ kích hoạt</h1>
           <p className="mt-4 text-[15px] leading-7 text-slate-600">
-            ID web của bạn — gửi admin để bật hoạt động (tương tự Telegram ID trong bot):
+            ID web của bạn — gửi ADMIN để bật hoạt động:
+          </p>
+          <p className="mt-3 text-sm text-slate-600">
+            Liên hệ Telegram admin kích hoạt:{' '}
+            <a
+              href="https://t.me/lieunhuyenbet"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-accent hover:underline"
+            >
+              @lieunhuyenbet
+            </a>
           </p>
           <code className="mt-6 inline-block rounded-[var(--radius-app)] border border-slate-200 bg-surface-2/80 px-5 py-3 font-mono text-sm text-accent">
             {u.id}
           </code>
           <p className="mt-8 text-sm text-slate-500">
-            Sau khi admin bật <span className="text-slate-400">isActive</span>, hãy{' '}
+            Sau khi ADMIN Kích Hoạt, hãy{' '}
             <Link href="/login" className="font-medium text-accent hover:underline">
               đăng nhập lại
             </Link>
