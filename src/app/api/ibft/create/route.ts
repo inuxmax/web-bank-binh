@@ -5,6 +5,7 @@ import { getIbftBankLabel } from '@/lib/banks';
 import { createIBFT, hpaySignatureHint } from '@/lib/server/hpay';
 import * as db from '@/lib/server/db';
 import { getSessionAdminPermissions, hasAdminPermission } from '@/lib/server/admin-permissions';
+import { notifyUserTelegramByUserId } from '@/lib/server/notify';
 
 export const runtime = 'nodejs';
 
@@ -15,7 +16,100 @@ const schema = z.object({
   amount: z.union([z.string(), z.number()]),
   remark: z.string().max(200).optional(),
   sourceBank: z.enum(['MSB', 'KLB']).optional(),
+  withdrawalId: z.string().optional(),
+  withdrawalMongoId: z.string().optional(),
 });
+
+async function autoHandleLinkedWithdrawal(params: {
+  id?: string;
+  mongoId?: string;
+  isSuccess: boolean;
+  failureReason?: string;
+}) {
+  const idNorm = String(params.id || '').trim();
+  const mongoNorm = String(params.mongoId || '').trim();
+  if (!idNorm && !mongoNorm) return { updated: false, reason: 'missing_withdrawal_ref' as const, status: 'none' as const };
+
+  let w =
+    (idNorm ? await db.getWithdrawalById(idNorm) : null) ||
+    (idNorm ? await db.getWithdrawalById(`WD${idNorm}`) : null) ||
+    (idNorm ? await db.getWithdrawalById(String(idNorm).replace(/^WD/i, '')) : null);
+  if (!w && mongoNorm) w = await db.getWithdrawalByMongoId(mongoNorm);
+  if (!w) return { updated: false, reason: 'withdrawal_not_found' as const, status: 'none' as const };
+  if (String(w.status || '') === 'done') return { updated: false, reason: 'already_done' as const, status: 'done' as const };
+  if (String(w.status || '') === 'reject') return { updated: false, reason: 'already_reject' as const, status: 'reject' as const };
+
+  const wid = String(w.id || '');
+  const wm = String(w.mongoId || mongoNorm || '');
+  const userId = String(w.userId || '');
+  if (params.isSuccess) {
+    if (wid) await db.updateWithdrawalStatus(wid, 'done');
+    else if (wm) await db.updateWithdrawalStatusByMongoId(wm, 'done');
+    if (userId) {
+      await db.addUserBalanceHistory({
+        ts: Date.now(),
+        userId,
+        delta: 0,
+        balanceAfter: Number((await db.getUser(userId)).balance) || 0,
+        reason: 'withdraw_done',
+        ref: wid || wm,
+      });
+      const msg = [
+        '✅ Lệnh rút tiền đã được duyệt',
+        `Mã: ${wid || wm || '—'}`,
+        `Ngân hàng: ${String(w.bankName || '—')}`,
+        `Số tiền: ${Number(w.amount || 0).toLocaleString('vi-VN')}đ`,
+        `Thực nhận: ${Number(w.actualReceive || 0).toLocaleString('vi-VN')}đ`,
+      ].join('\n');
+      await notifyUserTelegramByUserId(userId, msg);
+    }
+    return { updated: true, reason: 'updated_done' as const, id: wid || wm, status: 'done' as const };
+  }
+
+  const rejectNote = String(params.failureReason || '').trim() || 'Số tài khoản hoặc tên ngân hàng không đúng.';
+  if (wid) {
+    await db.updateWithdrawalStatus(wid, 'reject', {
+      rejectReason: 'admin_reject',
+      rejectNote,
+    });
+  } else if (wm) {
+    await db.updateWithdrawalStatusByMongoId(wm, 'reject', {
+      rejectReason: 'admin_reject',
+      rejectNote,
+    });
+  }
+  if (userId) {
+    const amt = Number(w.amount) || 0;
+    const u = await db.getUser(userId);
+    const after = (Number(u.balance) || 0) + amt;
+    await db.updateUser(userId, { balance: after });
+    await db.addUserBalanceHistory({
+      ts: Date.now(),
+      userId,
+      delta: amt,
+      balanceAfter: after,
+      reason: 'withdraw_refund_reason',
+      ref: wid || wm,
+    });
+    await db.addUserBalanceHistory({
+      ts: Date.now(),
+      userId,
+      delta: 0,
+      balanceAfter: after,
+      reason: `withdraw_reject_note:${rejectNote}`,
+      ref: wid || wm,
+    });
+    const msg = [
+      '❌ Lệnh rút tiền bị từ chối',
+      `Mã: ${wid || wm || '—'}`,
+      `Lý do: ${rejectNote}`,
+      `Số tiền hoàn: ${amt.toLocaleString('vi-VN')}đ`,
+      `Số dư sau hoàn: ${after.toLocaleString('vi-VN')}đ`,
+    ].join('\n');
+    await notifyUserTelegramByUserId(userId, msg);
+  }
+  return { updated: true, reason: 'updated_reject' as const, id: wid || wm, status: 'reject' as const };
+}
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -89,6 +183,25 @@ export async function POST(req: Request) {
     });
 
     const hint = hpaySignatureHint(raw);
+    const rawCode = String(raw.errorCode || '').trim();
+    const rawMsg = String(raw.errorMessage || '').trim();
+    const tranStatus = String((decoded as Record<string, unknown> | null)?.tranStatus || '')
+      .trim()
+      .toLowerCase();
+    const ibftSuccess =
+      rawCode === '00' ||
+      (rawCode === '' && !rawMsg) ||
+      tranStatus === 'success' ||
+      tranStatus === 'done' ||
+      tranStatus === 'completed';
+    const autoHandled = await autoHandleLinkedWithdrawal({
+      id: parsed.withdrawalId,
+      mongoId: parsed.withdrawalMongoId,
+      isSuccess: ibftSuccess,
+      failureReason: rawMsg
+        ? `Số tài khoản hoặc tên ngân hàng không đúng. (${rawMsg})`
+        : 'Số tài khoản hoặc tên ngân hàng không đúng.',
+    });
     const bizHint =
       String(raw.errorCode || '') === '214404'
         ? '214404: thường là từ chối nghiệp vụ — kiểm tra tên NH đích (đã gửi bankName), STK/tên chủ tài khoản, số tiền min/max theo chính sách, merchant đã bật IBFT/KLB; nếu chi KLB cần bộ client/MID KLB (HPAY_*_KLB) khớp kênh nguồn.'
@@ -98,6 +211,7 @@ export async function POST(req: Request) {
       decoded,
       raw,
       requestId,
+      autoHandled,
       hint: hint || bizHint,
       debug: {
         ...debug,

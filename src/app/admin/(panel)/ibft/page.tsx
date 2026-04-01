@@ -6,6 +6,7 @@ import { IBFT_BANKS } from '@/lib/banks';
 
 type WithdrawalItem = {
   id?: string;
+  mongoId?: string;
   bankCode?: string;
   bankName?: string;
   bankAccount?: string;
@@ -39,6 +40,7 @@ export default function AdminIbftPage() {
   const [remark, setRemark] = useState('');
   const [sourceBank, setSourceBank] = useState<'MSB' | 'KLB' | ''>('');
   const [withdrawals, setWithdrawals] = useState<WithdrawalItem[]>([]);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalItem | null>(null);
   const [loadingWithdrawals, setLoadingWithdrawals] = useState(false);
   const [out, setOut] = useState('');
   const [loading, setLoading] = useState(false);
@@ -78,16 +80,23 @@ export default function AdminIbftPage() {
           amount,
           remark: remark || undefined,
           sourceBank: sourceBank || undefined,
+          withdrawalId: selectedWithdrawal?.id ? String(selectedWithdrawal.id) : undefined,
+          withdrawalMongoId: selectedWithdrawal?.mongoId ? String(selectedWithdrawal.mongoId) : undefined,
         }),
       });
       const j = await res.json();
       setOut(JSON.stringify(j, null, 2));
+      if (j?.autoHandled?.updated) {
+        setSelectedWithdrawal(null);
+        await loadPendingWithdrawals();
+      }
     } finally {
       setLoading(false);
     }
   }
 
   function pickWithdrawal(w: WithdrawalItem) {
+    setSelectedWithdrawal(w);
     const code = String(w.bankCode || '').trim().toUpperCase() || mapBankCodeFromName(String(w.bankName || ''));
     const net = Number(w.actualReceive || 0);
     const raw = Number(w.amount || 0);
@@ -168,6 +177,11 @@ export default function AdminIbftPage() {
               <FieldLabel>Ghi chú</FieldLabel>
               <input value={remark} onChange={(e) => setRemark(e.target.value)} className={fieldInputClass} />
             </div>
+            {selectedWithdrawal ? (
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                Đang liên kết lệnh rút #{String(selectedWithdrawal.id || selectedWithdrawal.mongoId || '—')} — chi hộ thành công sẽ tự duyệt.
+              </p>
+            ) : null}
             <Button type="submit" disabled={loading}>
               Gửi chi hộ
             </Button>
@@ -194,7 +208,12 @@ export default function AdminIbftPage() {
                     key={String(w.id || `wd-${idx}`)}
                     type="button"
                     onClick={() => pickWithdrawal(w)}
-                    className="w-full rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/40 to-emerald-50/30 px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md"
+                    className={`w-full rounded-2xl border bg-gradient-to-br px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                      String(selectedWithdrawal?.id || selectedWithdrawal?.mongoId || '') ===
+                      String(w.id || w.mongoId || '')
+                        ? 'border-emerald-300 from-emerald-50 via-white to-sky-50 ring-2 ring-emerald-200/70'
+                        : 'border-sky-100 from-white via-sky-50/40 to-emerald-50/30 hover:border-accent/40'
+                    }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-slate-800">#{String(w.id || '—')}</p>
