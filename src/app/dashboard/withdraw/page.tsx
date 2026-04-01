@@ -116,8 +116,8 @@ export default function WithdrawPage() {
         description="Số dư sẽ bị trừ ngay khi gửi; admin duyệt lệnh ở trang quản trị."
       />
 
-      <div className="mb-6">
-        <Card padding="md" variant="quiet" className="max-w-[560px]">
+      <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+        <Card padding="md" variant="quiet">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Phí áp dụng</p>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2">
@@ -137,6 +137,17 @@ export default function WithdrawPage() {
               </p>
             </div>
           </div>
+        </Card>
+
+        <Card
+          padding="md"
+          className="border-2 border-rose-400 bg-gradient-to-br from-rose-100 via-rose-50 to-white shadow-[0_12px_28px_rgba(244,63,94,0.28)]"
+        >
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-rose-700">Thông báo quan trọng</p>
+          <p className="mt-2 text-sm font-bold leading-6 text-rose-900">
+            YÊU CẦU RÚT TIỀN SẼ ĐƯỢC XỬ LÝ TRONG VÒNG 1-2 GIỜ, VUI LÒNG CHỜ ADMIN DUYỆT VÀ CHUYỂN TIỀN. KHÔNG ĐƯỢC GIỤC
+            ADMIN CÁU LÀ XOÁ WEBSITE ĐẤY.....
+          </p>
         </Card>
       </div>
 
