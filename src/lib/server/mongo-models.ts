@@ -12,6 +12,7 @@ const UserSchema = new Schema(
     spamMutedUntil: { type: Number, default: 0 },
     spamReason: { type: String, default: '' },
     isBanned: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: false },
     feePercent: { type: Schema.Types.Mixed, default: null },
     ipnFeeFlat: { type: Schema.Types.Mixed, default: null },

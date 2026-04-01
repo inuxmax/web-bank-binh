@@ -26,6 +26,7 @@ function defaultUserRecord(id: string): UserRecord {
     spamMutedUntil: 0,
     spamReason: '',
     isBanned: false,
+    isVerified: false,
     isActive: false,
     feePercent: null,
     ipnFeeFlat: null,

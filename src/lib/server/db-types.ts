@@ -10,6 +10,8 @@ export type UserRecord = {
   spamReason: string;
   /** Khóa tài khoản: không đăng nhập, không gọi API user */
   isBanned?: boolean;
+  /** User đã được verify thủ công bởi admin */
+  isVerified?: boolean;
   isActive: boolean;
   feePercent: number | null;
   ipnFeeFlat: number | null;

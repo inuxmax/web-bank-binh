@@ -29,6 +29,20 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
   }
 
   const vas = await db.getVAsByUser(uid, 500);
+  const vaByRequestId = new Map<string, Record<string, unknown>>();
+  const vaByParentRequestId = new Map<string, Record<string, unknown>>();
+  const vaByTxId = new Map<string, Record<string, unknown>>();
+  const vaByCashinId = new Map<string, Record<string, unknown>>();
+  for (const r of vas as Record<string, unknown>[]) {
+    const rid = String(r.requestId || '').trim();
+    const parentRid = String(r.parentRequestId || '').trim();
+    const txId = String(r.transactionId || '').trim();
+    const cashinId = String(r.cashinId || '').trim();
+    if (rid) vaByRequestId.set(rid, r);
+    if (parentRid) vaByParentRequestId.set(parentRid, r);
+    if (txId) vaByTxId.set(txId, r);
+    if (cashinId) vaByCashinId.set(cashinId, r);
+  }
   const vaItems = vas.map((r) => ({
     requestId: r.requestId != null ? String(r.requestId) : '',
     vaAccount: r.vaAccount != null ? String(r.vaAccount) : '',
@@ -57,6 +71,33 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
     }));
 
   const transactions = (await db.getUserBalanceHistory(uid, 300)).map((x) => ({
+    ...(() => {
+      const reason = x.reason != null ? String(x.reason) : '';
+      const reasonLower = reason.toLowerCase();
+      const ref = x.ref != null ? String(x.ref) : '';
+      let vaInfo: Record<string, unknown> | null = null;
+      if (reasonLower === 'ipn' || reasonLower === 'va_paid') {
+        const refKey = ref.trim();
+        const baseRef = refKey.includes(':') ? refKey.split(':')[0] || refKey : refKey;
+        const txRef = refKey.includes(':') ? refKey.split(':')[1] || '' : '';
+        vaInfo =
+          vaByRequestId.get(refKey) ||
+          vaByRequestId.get(baseRef) ||
+          vaByParentRequestId.get(baseRef) ||
+          (txRef ? vaByTxId.get(txRef) : null) ||
+          (txRef ? vaByCashinId.get(txRef) : null) ||
+          vaByTxId.get(refKey) ||
+          vaByCashinId.get(refKey) ||
+          null;
+      }
+      return {
+        vaAccount: vaInfo ? String(vaInfo.vaAccount || '') : '',
+        vaBank: vaInfo ? String(vaInfo.vaBank || '') : '',
+        transferContent: vaInfo
+          ? String(vaInfo.transferContent || vaInfo.remark || '')
+          : '',
+      };
+    })(),
     ts: Number(x.ts) || 0,
     delta: Number(x.delta) || 0,
     balanceAfter: Number(x.balanceAfter) || 0,

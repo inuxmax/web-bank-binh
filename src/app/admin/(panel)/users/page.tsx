@@ -12,6 +12,7 @@ type U = {
   email?: string;
   isActive: boolean;
   isBanned?: boolean;
+  isVerified?: boolean;
   balance: number;
   vaLimit: number | null;
   createdVA: number;
@@ -59,6 +60,9 @@ type HistoryPayload = {
     balanceAfter: number;
     reason: string;
     ref: string;
+    vaAccount?: string;
+    vaBank?: string;
+    transferContent?: string;
   }[];
 };
 
@@ -83,6 +87,25 @@ function reasonLabel(reason: string) {
   if (r.startsWith('withdraw_reject_note:')) return `Lý do từ chối: ${reason.slice('withdraw_reject_note:'.length)}`;
   if (r === 'va_paid') return 'Tiền về từ VA';
   return reason || '—';
+}
+
+function renderTxContent(t: HistoryPayload['transactions'][number]) {
+  const reason = String(t.reason || '').toLowerCase();
+  const isVaPaid = reason === 'ipn' || reason === 'va_paid';
+  if (!isVaPaid) return reasonLabel(t.reason);
+  const account = String(t.vaAccount || '').trim();
+  const bank = String(t.vaBank || '').trim();
+  const transferContent = String(t.transferContent || '').trim();
+  return (
+    <div className="space-y-0.5">
+      <p className="font-semibold text-slate-800">Tiền vào từ VA</p>
+      <p className="text-slate-600">
+        VA: {account || '—'}{bank ? ` · NH: ${bank}` : ''}
+      </p>
+      <p className="break-all text-slate-600">Nội dung: {transferContent || '—'}</p>
+      <p className="text-slate-700">Số tiền cộng: {Math.max(0, Number(t.delta) || 0).toLocaleString('vi-VN')} đ</p>
+    </div>
+  );
 }
 
 export default function AdminUsersPage() {
@@ -376,7 +399,7 @@ export default function AdminUsersPage() {
                                         {t.delta.toLocaleString('vi-VN')} đ
                                       </td>
                                       <td className="p-2 whitespace-nowrap tabular-nums">{t.balanceAfter.toLocaleString('vi-VN')} đ</td>
-                                      <td className="p-2">{reasonLabel(t.reason)}</td>
+                                      <td className="p-2">{renderTxContent(t)}</td>
                                       <td className="p-2 font-mono text-[11px]">{t.ref || '—'}</td>
                                     </tr>
                                   ))}
@@ -703,10 +726,23 @@ export default function AdminUsersPage() {
           </thead>
           <tbody>
             {pagedUsers.map((u) => (
-              <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50/80">
+              <tr
+                key={u.id}
+                className={`border-b border-slate-100 ${
+                  u.isVerified ? 'bg-sky-100/90 hover:bg-sky-200/80' : 'hover:bg-slate-50/80'
+                }`}
+              >
                 <td className="p-3 font-mono text-xs text-accent">
-                  <div className="max-w-[180px] truncate" title={u.id}>
-                    {u.id}
+                  <div className="flex max-w-[180px] items-center gap-1.5 truncate" title={u.id}>
+                    <span className="truncate">{u.id}</span>
+                    {u.isVerified ? (
+                      <span
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-sky-500 text-[10px] font-bold text-white"
+                        title="Đã verify"
+                      >
+                        ✓
+                      </span>
+                    ) : null}
                   </div>
                 </td>
                 <td className="p-3">
@@ -776,6 +812,17 @@ export default function AdminUsersPage() {
                       className="rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/15"
                     >
                       Cộng tiền
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void patch(u.id, { isVerified: !u.isVerified })}
+                      className={`rounded-lg border px-2 py-1 text-xs font-medium shadow-sm ${
+                        u.isVerified
+                          ? 'border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {u.isVerified ? 'Bỏ verify' : 'Verify'}
                     </button>
                     <button
                       type="button"

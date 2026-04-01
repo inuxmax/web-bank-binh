@@ -6,13 +6,14 @@ export function TelegramConnectCard({ initialLinked }: { initialLinked: boolean 
   const [linked, setLinked] = useState(initialLinked);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [manualUrl, setManualUrl] = useState<string>('');
 
   async function openTelegramLink() {
-    // Open a blank tab immediately on user click so mobile browsers
-    // don't block navigation after async fetch.
-    const popup = window.open('', '_blank', 'noopener,noreferrer');
+    // Open tab immediately in user-gesture context for mobile browsers.
+    const popup = window.open('', '_blank');
     setBusy(true);
     setMessage(null);
+    setManualUrl('');
     try {
       const res = await fetch('/api/me/telegram-link', { method: 'POST' });
       const d = await res.json().catch(() => ({}));
@@ -23,9 +24,13 @@ export function TelegramConnectCard({ initialLinked }: { initialLinked: boolean 
       }
       if (typeof d.url === 'string') {
         if (popup && !popup.closed) {
-          popup.location.href = d.url;
+          try {
+            popup.opener = null;
+          } catch {}
+          popup.location.replace(d.url);
         } else {
-          window.location.href = d.url;
+          // Popup bị chặn: giữ nguyên trang hiện tại, cho user bấm link thủ công.
+          setManualUrl(d.url);
         }
         setMessage('Đã mở Telegram. Trong chat với bot, bấm «Start» / «Bắt đầu». Sau đó tải lại trang này để thấy trạng thái «Đã kết nối».');
       } else if (popup && !popup.closed) {
@@ -91,6 +96,16 @@ export function TelegramConnectCard({ initialLinked }: { initialLinked: boolean 
           Đã bấm Start — kiểm tra
         </button>
       </div>
+      {manualUrl ? (
+        <a
+          href={manualUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex rounded-[var(--radius-app)] border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100"
+        >
+          Mở Telegram thủ công
+        </a>
+      ) : null}
       {message ? <p className="text-xs text-slate-500">{message}</p> : null}
     </div>
   );

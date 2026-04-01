@@ -29,6 +29,7 @@ export async function GET() {
       email: u.email || '',
       isActive: u.isActive,
       isBanned: u.isBanned === true,
+      isVerified: u.isVerified === true,
       balance: u.balance,
       vaLimit: u.vaLimit,
       createdVA: u.createdVA,
@@ -54,6 +55,7 @@ const patchSchema = z.object({
   activeAll: z.boolean().optional(),
   isActive: z.boolean().optional(),
   isBanned: z.boolean().optional(),
+  isVerified: z.boolean().optional(),
   vaLimit: z.number().int().min(0).nullable().optional(),
   feePercent: z.number().min(0).max(100).nullable().optional(),
   ipnFeeFlat: z.number().min(0).nullable().optional(),
@@ -116,6 +118,7 @@ export async function PATCH(req: Request) {
     const userPatch: Record<string, unknown> = {};
     if (data.isActive !== undefined) userPatch.isActive = data.isActive;
     if (data.isBanned !== undefined) userPatch.isBanned = data.isBanned;
+    if (data.isVerified !== undefined) userPatch.isVerified = data.isVerified;
     if (data.vaLimit !== undefined) userPatch.vaLimit = data.vaLimit;
     if (data.feePercent !== undefined) userPatch.feePercent = data.feePercent;
     if (data.ipnFeeFlat !== undefined) userPatch.ipnFeeFlat = data.ipnFeeFlat;
