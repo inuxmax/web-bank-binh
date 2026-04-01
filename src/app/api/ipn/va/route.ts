@@ -107,7 +107,7 @@ async function handleIpn(req: Request) {
     secureCode,
   });
   const fallbackByRequestIdEnabled =
-    String(process.env.HPAY_IPN_ALLOW_FALLBACK_BY_REQUEST_ID || '').trim().toLowerCase() === 'true';
+    String(process.env.HPAY_IPN_ALLOW_FALLBACK_BY_REQUEST_ID || 'true').trim().toLowerCase() !== 'false';
   if (!ok && fallbackByRequestIdEnabled && clientRequestId) {
     try {
       const all = await db.loadAll();
