@@ -4,74 +4,54 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import * as db from '@/lib/server/db';
 import { getSession } from '@/lib/get-session';
-import { isUserBanned, USER_BANNED_MESSAGE } from '@/lib/server/user-guard';
 import { getClientIp } from '@/lib/server/request-ip';
 import { normalizeAdminPermissions } from '@/lib/server/admin-permissions';
-import { sendSmtpMail } from '@/lib/server/smtp';
+import { isUserBanned, USER_BANNED_MESSAGE } from '@/lib/server/user-guard';
 
 export const runtime = 'nodejs';
 
 const schema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
+  code: z.string().min(4).max(10),
 });
 
-function make2faCode() {
-  return `${Math.floor(100000 + Math.random() * 900000)}`;
-}
-
 function hash2fa(userId: string, code: string) {
-  return crypto.createHash('sha256').update(`${String(userId).toLowerCase()}|${code}`, 'utf8').digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(`${String(userId).toLowerCase()}|${String(code).trim()}`, 'utf8')
+    .digest('hex');
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { username, password } = schema.parse(body);
+    const { username, password, code } = schema.parse(body);
     const webLogin = username.trim().toLowerCase();
     const u =
       (await db.findUserByWebLogin(webLogin)) ||
       (await db.findUser(`web_${webLogin}`)) ||
       null;
-
     if (!u || !u.passwordHash) {
       return NextResponse.json({ error: 'Sai tên đăng nhập hoặc mật khẩu' }, { status: 401 });
     }
-
-    const ok = await bcrypt.compare(password, u.passwordHash);
-    if (!ok) {
+    const okPass = await bcrypt.compare(password, u.passwordHash);
+    if (!okPass) {
       return NextResponse.json({ error: 'Sai tên đăng nhập hoặc mật khẩu' }, { status: 401 });
     }
-
     if (isUserBanned(u)) {
       return NextResponse.json({ error: USER_BANNED_MESSAGE }, { status: 403 });
     }
-
-    if (u.twoFactorEnabled === true) {
-      if (!String(u.email || '').trim()) {
-        return NextResponse.json({ error: 'Tài khoản đã bật 2FA nhưng chưa có email.' }, { status: 400 });
-      }
-      const code = make2faCode();
-      const expiresAt = Date.now() + 5 * 60 * 1000;
-      await db.updateUser(u.id, {
-        twoFactorCodeHash: hash2fa(u.id, code),
-        twoFactorCodeExpires: expiresAt,
-      });
-      try {
-        await sendSmtpMail({
-          to: String(u.email || '').trim(),
-          subject: 'Mã xác thực đăng nhập (2FA)',
-          text: `Mã xác thực của bạn là: ${code}\nMã hết hạn sau 5 phút.`,
-          html: `<p>Mã xác thực của bạn là: <strong>${code}</strong></p><p>Mã hết hạn sau 5 phút.</p>`,
-        });
-      } catch (e) {
-        return NextResponse.json({ error: `Không gửi được mã 2FA: ${(e as Error).message}` }, { status: 500 });
-      }
-      return NextResponse.json({
-        ok: true,
-        requires2fa: true,
-        message: `Đã gửi mã 2FA tới email ${String(u.email || '').trim()}`,
-      });
+    if (u.twoFactorEnabled !== true) {
+      return NextResponse.json({ error: 'Tài khoản chưa bật 2FA.' }, { status: 400 });
+    }
+    const exp = Number(u.twoFactorCodeExpires || 0);
+    if (!exp || Date.now() > exp) {
+      return NextResponse.json({ error: 'Mã 2FA đã hết hạn. Vui lòng đăng nhập lại để nhận mã mới.' }, { status: 400 });
+    }
+    const hash = hash2fa(u.id, code);
+    if (hash !== String(u.twoFactorCodeHash || '')) {
+      return NextResponse.json({ error: 'Mã 2FA không đúng.' }, { status: 400 });
     }
 
     const session = await getSession();
@@ -84,8 +64,9 @@ export async function POST(req: Request) {
     await db.updateUser(u.id, {
       lastLoginIp: getClientIp(req),
       lastLoginAt: Date.now(),
+      twoFactorCodeHash: '',
+      twoFactorCodeExpires: null,
     });
-
     return NextResponse.json({ ok: true, userId: u.id });
   } catch (e) {
     if (e instanceof z.ZodError) {

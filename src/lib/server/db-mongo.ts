@@ -34,6 +34,8 @@ function defaultUserRecord(id: string): UserRecord {
     vaLimit: null,
     balance: 0,
     createdVA: 0,
+    twoFactorEnabled: false,
+    twoFactorCodeExpires: null,
     ctvStatus: 'none',
     adminPermissions: [],
     ctvRatePercent: null,

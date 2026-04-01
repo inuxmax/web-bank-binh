@@ -20,6 +20,9 @@ export type UserRecord = {
   balance: number;
   createdVA: number;
   passwordHash?: string;
+  twoFactorEnabled?: boolean;
+  twoFactorCodeHash?: string;
+  twoFactorCodeExpires?: number | null;
   webLogin?: string;
   /** ID Telegram (string) sau khi /lienket — một Telegram chỉ gắn một user */
   telegramId?: string;

@@ -16,9 +16,16 @@ export async function GET() {
       user: {
         id: 'admin',
         username: 'admin',
+        webLogin: 'admin',
+        fullName: 'Administrator',
+        phone: '',
+        email: '',
+        telegramUsername: '',
         isAdmin: true,
         isActive: true,
+        twoFactorEnabled: false,
         balance: 0,
+        createdVA: 0,
       },
     });
   }
@@ -45,10 +52,13 @@ export async function GET() {
     user: {
       id: fresh.id,
       username: fresh.username || fresh.webLogin,
+      webLogin: fresh.webLogin || '',
       fullName: fresh.fullName || '',
+      email: fresh.email || '',
       isActive: fresh.isActive,
       isBanned: fresh.isBanned === true,
       telegramLinked: !!fresh.telegramId,
+      telegramUsername: fresh.telegramUsername || '',
       isAdmin: adminPermissions.length > 0,
       adminPermissions,
       balance: fresh.balance,
@@ -57,6 +67,7 @@ export async function GET() {
       ctvStatus: fresh.ctvStatus || 'none',
       ctvCode: fresh.ctvCode || '',
       phone: fresh.phone || '',
+      twoFactorEnabled: fresh.twoFactorEnabled === true,
       feePercent,
       ipnFeeFlat,
       withdrawFeeFlat,

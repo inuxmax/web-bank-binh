@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn';
 
 const userLinks = [
   { href: '/dashboard', label: 'Tổng quan' },
+  { href: '/dashboard/profile', label: 'Profile' },
   { href: '/dashboard/va/new', label: 'Tạo VA' },
   { href: '/dashboard/va', label: 'VA của tôi' },
   { href: '/dashboard/withdraw', label: 'Rút tiền' },
@@ -183,7 +184,9 @@ export function DashboardNav({
       </div>
 
       <div className="hidden rounded-[var(--radius-app)] border border-slate-200/90 bg-surface-2/90 p-3 md:block">
-        <p className="truncate text-sm font-semibold text-slate-900">{profile?.name || '—'}</p>
+        <Link href="/dashboard/profile" className="block truncate text-sm font-semibold text-slate-900 hover:underline">
+          {profile?.name || '—'}
+        </Link>
         <p className="mt-0.5 text-xs text-slate-500">{profile?.roleLabel || (isAdmin ? 'Admin' : 'Người dùng')}</p>
         <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-600">
           <div className="rounded bg-white/80 px-2 py-1">
