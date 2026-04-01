@@ -31,6 +31,8 @@ export default function AdminCtvPage() {
   const popup = useAppPopup();
   const [items, setItems] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   async function load() {
     setLoading(true);
@@ -43,6 +45,10 @@ export default function AdminCtvPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [items.length]);
 
   async function act(id: string, action: 'approve' | 'reject') {
     const ok = await popup.confirm(
@@ -101,72 +107,113 @@ export default function AdminCtvPage() {
       {loading ? (
         <p className="text-sm text-slate-500">Đang tải…</p>
       ) : (
-        <div className="overflow-x-auto rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1 shadow-inner-glow">
-          <table className="w-full min-w-[980px] text-left text-sm text-slate-700">
-            <thead className="border-b border-slate-200 bg-surface-2/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="p-3">User</th>
-                <th className="p-3">Mã CTV</th>
-                <th className="p-3">Trạng thái</th>
-                <th className="p-3">Đã giới thiệu</th>
-                <th className="p-3">Thu nhập</th>
-                <th className="p-3">Số lượt</th>
-                <th className="p-3">Tỷ lệ</th>
-                <th className="p-3">Đăng ký</th>
-                <th className="p-3">Duyệt</th>
-                <th className="p-3">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((r) => (
-                <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
-                  <td className="p-3">
-                    <p className="font-medium text-slate-900">{r.name}</p>
-                    <p className="text-xs text-slate-500">{r.id}</p>
-                  </td>
-                  <td className="p-3 font-mono text-xs">{r.ctvCode || '—'}</td>
-                  <td className="p-3">{r.ctvStatus}</td>
-                  <td className="p-3">{Number(r.referralCount || 0).toLocaleString('vi-VN')}</td>
-                  <td className="p-3">{Number(r.commissionTotal || 0).toLocaleString('vi-VN')} đ</td>
-                  <td className="p-3">{Number(r.commissionCount || 0).toLocaleString('vi-VN')}</td>
-                  <td className="p-3">
-                    <div>{Number(r.ratePercent || 0)}%</div>
-                    <div className="text-[11px] text-slate-500">
-                      {r.userRatePercent == null ? 'Theo global' : 'Set riêng'}
-                    </div>
-                  </td>
-                  <td className="p-3 text-xs">{fmtTs(r.ctvAppliedAt)}</td>
-                  <td className="p-3 text-xs">{fmtTs(r.ctvApprovedAt)}</td>
-                  <td className="p-3">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void setUserRate(r)}
-                        className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
-                      >
-                        Set %
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void act(r.id, 'approve')}
-                        className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
-                      >
-                        Duyệt
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void act(r.id, 'reject')}
-                        className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700"
-                      >
-                        Từ chối
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {(() => {
+            const total = items.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const safePage = Math.min(Math.max(1, page), totalPages);
+            const start = (safePage - 1) * pageSize;
+            const rows = items.slice(start, start + pageSize);
+            return (
+              <>
+                <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
+                  <span>
+                    Trang {safePage}/{totalPages} · {total} user
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={safePage <= 1}
+                      className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                    >
+                      Trước
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={safePage >= totalPages}
+                      className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                    >
+                      Sau
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1 shadow-inner-glow">
+                  <table className="w-full min-w-[980px] text-left text-sm text-slate-700">
+                    <thead className="border-b border-slate-200 bg-surface-2/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      <tr>
+                        <th className="p-3">User</th>
+                        <th className="p-3">Mã CTV</th>
+                        <th className="p-3">Trạng thái</th>
+                        <th className="p-3">Đã giới thiệu</th>
+                        <th className="p-3">Thu nhập</th>
+                        <th className="p-3">Số lượt</th>
+                        <th className="p-3">Tỷ lệ</th>
+                        <th className="p-3">Đăng ký</th>
+                        <th className="p-3">Duyệt</th>
+                        <th className="p-3">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => (
+                        <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
+                          <td className="p-3">
+                            <p className="font-medium text-slate-900">{r.name}</p>
+                            <p className="text-xs text-slate-500">{r.id}</p>
+                          </td>
+                          <td className="p-3 font-mono text-xs">{r.ctvCode || '—'}</td>
+                          <td className="p-3">{r.ctvStatus}</td>
+                          <td className="p-3">{Number(r.referralCount || 0).toLocaleString('vi-VN')}</td>
+                          <td className="p-3">{Number(r.commissionTotal || 0).toLocaleString('vi-VN')} đ</td>
+                          <td className="p-3">{Number(r.commissionCount || 0).toLocaleString('vi-VN')}</td>
+                          <td className="p-3">
+                            <div>{Number(r.ratePercent || 0)}%</div>
+                            <div className="text-[11px] text-slate-500">
+                              {r.userRatePercent == null ? 'Theo global' : 'Set riêng'}
+                            </div>
+                          </td>
+                          <td className="p-3 text-xs">{fmtTs(r.ctvAppliedAt)}</td>
+                          <td className="p-3 text-xs">{fmtTs(r.ctvApprovedAt)}</td>
+                          <td className="p-3">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => void setUserRate(r)}
+                                className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                              >
+                                Set %
+                              </button>
+                              {r.ctvStatus !== 'approved' ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => void act(r.id, 'approve')}
+                                    className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
+                                  >
+                                    Duyệt
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void act(r.id, 'reject')}
+                                    className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700"
+                                  >
+                                    Từ chối
+                                  </button>
+                                </>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            );
+          })()}
+        </>
       )}
     </div>
   );

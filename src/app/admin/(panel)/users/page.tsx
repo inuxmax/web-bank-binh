@@ -86,6 +86,7 @@ export default function AdminUsersPage() {
   const [historyUser, setHistoryUser] = useState<U | null>(null);
   const [historyData, setHistoryData] = useState<HistoryPayload | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [txPage, setTxPage] = useState(1);
   const [feeUser, setFeeUser] = useState<U | null>(null);
   const [feePercentInput, setFeePercentInput] = useState('');
   const [ipnFeeInput, setIpnFeeInput] = useState('');
@@ -131,6 +132,10 @@ export default function AdminUsersPage() {
       })
       .finally(() => setHistoryLoading(false));
   }, [historyUser]);
+
+  useEffect(() => {
+    setTxPage(1);
+  }, [historyUser, historyData?.userId]);
 
   async function patch(id: string, body: Record<string, unknown>) {
     const res = await fetch('/api/admin/users', {
@@ -329,37 +334,72 @@ export default function AdminUsersPage() {
                     {historyData.transactions.length === 0 ? (
                       <p className="text-slate-500">Chưa có giao dịch số dư.</p>
                     ) : (
-                      <div className="overflow-x-auto rounded-lg border border-slate-200/90">
-                        <table className="w-full min-w-[760px] text-left text-xs">
-                          <thead className="bg-surface-2/80 text-[10px] uppercase tracking-wide text-slate-500">
-                            <tr>
-                              <th className="p-2">Thời gian</th>
-                              <th className="p-2">Biến động</th>
-                              <th className="p-2">Số dư sau</th>
-                              <th className="p-2">Nội dung</th>
-                              <th className="p-2">Ref</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {historyData.transactions.map((t, idx) => (
-                              <tr key={`${t.ts}-${t.ref}-${idx}`} className="border-t border-slate-100">
-                                <td className="p-2 whitespace-nowrap text-slate-600">{fmtTs(t.ts)}</td>
-                                <td
-                                  className={`p-2 whitespace-nowrap font-semibold tabular-nums ${
-                                    t.delta > 0 ? 'text-emerald-700' : t.delta < 0 ? 'text-rose-700' : 'text-slate-600'
-                                  }`}
+                      (() => {
+                        const txPageSize = 10;
+                        const txTotal = historyData.transactions.length;
+                        const txTotalPages = Math.max(1, Math.ceil(txTotal / txPageSize));
+                        const txSafePage = Math.min(Math.max(1, txPage), txTotalPages);
+                        const txStart = (txSafePage - 1) * txPageSize;
+                        const txRows = historyData.transactions.slice(txStart, txStart + txPageSize);
+                        return (
+                          <>
+                            <div className="overflow-x-auto rounded-lg border border-slate-200/90">
+                              <table className="w-full min-w-[760px] text-left text-xs">
+                                <thead className="bg-surface-2/80 text-[10px] uppercase tracking-wide text-slate-500">
+                                  <tr>
+                                    <th className="p-2">Thời gian</th>
+                                    <th className="p-2">Biến động</th>
+                                    <th className="p-2">Số dư sau</th>
+                                    <th className="p-2">Nội dung</th>
+                                    <th className="p-2">Ref</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {txRows.map((t, idx) => (
+                                    <tr key={`${t.ts}-${t.ref}-${idx}`} className="border-t border-slate-100">
+                                      <td className="p-2 whitespace-nowrap text-slate-600">{fmtTs(t.ts)}</td>
+                                      <td
+                                        className={`p-2 whitespace-nowrap font-semibold tabular-nums ${
+                                          t.delta > 0 ? 'text-emerald-700' : t.delta < 0 ? 'text-rose-700' : 'text-slate-600'
+                                        }`}
+                                      >
+                                        {t.delta > 0 ? '+' : ''}
+                                        {t.delta.toLocaleString('vi-VN')} đ
+                                      </td>
+                                      <td className="p-2 whitespace-nowrap tabular-nums">{t.balanceAfter.toLocaleString('vi-VN')} đ</td>
+                                      <td className="p-2">{reasonLabel(t.reason)}</td>
+                                      <td className="p-2 font-mono text-[11px]">{t.ref || '—'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                              <span>
+                                Trang {txSafePage}/{txTotalPages} · {txTotal} giao dịch
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setTxPage((p) => Math.max(1, p - 1))}
+                                  disabled={txSafePage <= 1}
+                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
                                 >
-                                  {t.delta > 0 ? '+' : ''}
-                                  {t.delta.toLocaleString('vi-VN')} đ
-                                </td>
-                                <td className="p-2 whitespace-nowrap tabular-nums">{t.balanceAfter.toLocaleString('vi-VN')} đ</td>
-                                <td className="p-2">{reasonLabel(t.reason)}</td>
-                                <td className="p-2 font-mono text-[11px]">{t.ref || '—'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                  Trước
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setTxPage((p) => Math.min(txTotalPages, p + 1))}
+                                  disabled={txSafePage >= txTotalPages}
+                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                                >
+                                  Sau
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()
                     )}
                   </section>
 
