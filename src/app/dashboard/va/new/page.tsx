@@ -64,99 +64,108 @@ export default function NewVaPage() {
   }
 
   return (
-      <div>
-        <PageHeader
-          eyebrow="Sinpay API"
-          title="Tạo Virtual Account"
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Sinpay API"
+        title="Tạo Virtual Account"
         description="Tên sẽ được tự động chuẩn hóa sang không dấu trước khi gửi API."
-        />
+      />
 
-        <div className="grid gap-8 lg:grid-cols-5">
-          <Card className="lg:col-span-3" padding="lg">
-            <form onSubmit={submit} className="space-y-6">
-              <div>
-                <FieldLabel>Tên chủ VA</FieldLabel>
-                <div className="mt-2 flex gap-2">
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className={`${fieldInputClass} flex-1`}
-                    placeholder="Nguyen Van A"
-                    required
-                  />
-                  <Button type="button" variant="secondary" onClick={randomizeName} size="sm" className="shrink-0">
-                    Ngẫu nhiên
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <FieldLabel>Ngân hàng VA</FieldLabel>
-                <select
-                  value={bankCode}
-                  onChange={(e) => setBankCode(e.target.value as typeof bankCode)}
-                  className={fieldSelectClass}
-                >
-                  <option value="MSB">MSB</option>
-                  <option value="KLB">KLB</option>
-                  <option value="BIDV">BIDV (bảo trì / hạn chế)</option>
-                  <option value="">Tự động theo cấu hình</option>
-                </select>
-              </div>
-              <div>
-                <FieldLabel>Nội dung CK (tùy chọn)</FieldLabel>
-                <input
-                  value={remark}
-                  onChange={(e) => setRemark(e.target.value)}
-                  className={fieldInputClass}
-                  placeholder="Để trống = không có nội dung"
-                />
-              </div>
-              {err ? <p className="text-sm font-medium text-rose-400">{err}</p> : null}
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Đang gọi API…' : 'Tạo VA'}
-              </Button>
-            </form>
-          </Card>
-
-          <div className="lg:col-span-2">
-            {result ? (
-              <Card variant="accent" padding="lg">
-                <CardHeader>
-                  <CardTitle className="text-accent/90">Đã tạo</CardTitle>
-                </CardHeader>
-                <p className="text-xs font-mono text-slate-500">requestId: {result.requestId}</p>
-                <ul className="mt-4 space-y-2 text-sm text-slate-700">
-                  <li>
-                    Ngân hàng: {displayVaBankClient(result.decoded, bankCode || undefined)} (
-                    {result.decoded.vaBank || bankCode})
-                  </li>
-                  <li>Tên TK: {result.decoded.vaName}</li>
-                  <li>Số TK: {result.decoded.vaAccount}</li>
-                  <li>Nội dung: {result.decoded.remark || '—'}</li>
-                </ul>
-                {result.sepayUrl ? (
-                  <div className="mt-6 flex flex-col items-start gap-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">QR Sepay</p>
-                    <Image
-                      src={result.sepayUrl}
-                      alt="QR"
-                      width={220}
-                      height={220}
-                      unoptimized
-                      className="rounded-[var(--radius-app)] border border-slate-200"
-                    />
-                  </div>
-                ) : null}
-              </Card>
-            ) : (
-              <Card variant="quiet" padding="lg" className="h-full min-h-[200px]">
-                <p className="text-sm leading-relaxed text-slate-500">
-                  Sau khi tạo thành công, mã VA và QR hiển thị tại đây để sao chép hoặc chia sẻ.
-                </p>
-              </Card>
-            )}
+      <div className="grid gap-8 lg:grid-cols-5">
+        <Card className="border border-slate-200/90 bg-white/95 shadow-card lg:col-span-3" padding="lg">
+          <div className="mb-4">
+            <h2 className="font-display text-lg font-semibold text-slate-900">Thông tin tạo VA</h2>
+            <p className="mt-1 text-xs text-slate-500">Nhập tên chủ VA, chọn ngân hàng và nội dung chuyển khoản (nếu cần).</p>
+            <div className="mt-2 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+              Đang chọn ngân hàng: {bankCode || 'Tự động'}
+            </div>
           </div>
+          <form onSubmit={submit} className="space-y-6">
+            <div>
+              <FieldLabel>Tên chủ VA</FieldLabel>
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={`${fieldInputClass} flex-1`}
+                  placeholder="Nguyen Van A"
+                  required
+                />
+                <Button type="button" variant="secondary" onClick={randomizeName} size="sm" className="shrink-0">
+                  Ngẫu nhiên
+                </Button>
+              </div>
+            </div>
+            <div>
+              <FieldLabel>Ngân hàng VA</FieldLabel>
+              <select
+                value={bankCode}
+                onChange={(e) => setBankCode(e.target.value as typeof bankCode)}
+                className={fieldSelectClass}
+              >
+                <option value="MSB">MSB</option>
+                <option value="KLB">KLB</option>
+                <option value="BIDV">BIDV (bảo trì / hạn chế)</option>
+                <option value="">Tự động theo cấu hình</option>
+              </select>
+            </div>
+            <div>
+              <FieldLabel>Nội dung CK (tùy chọn)</FieldLabel>
+              <input
+                value={remark}
+                onChange={(e) => setRemark(e.target.value)}
+                className={fieldInputClass}
+                placeholder="Để trống = không có nội dung"
+              />
+            </div>
+            {err ? (
+              <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{err}</p>
+            ) : null}
+            <Button type="submit" disabled={loading} className="w-full transition sm:w-auto">
+              {loading ? 'Đang gọi API…' : 'Tạo VA'}
+            </Button>
+          </form>
+        </Card>
+
+        <div className="lg:col-span-2">
+          {result ? (
+            <Card variant="accent" padding="lg" className="border border-emerald-200/90">
+              <CardHeader>
+                <CardTitle className="text-accent/90">Đã tạo thành công</CardTitle>
+              </CardHeader>
+              <p className="text-xs font-mono text-slate-500">requestId: {result.requestId}</p>
+              <ul className="mt-4 space-y-2 text-sm text-slate-700">
+                <li>
+                  Ngân hàng: {displayVaBankClient(result.decoded, bankCode || undefined)} (
+                  {result.decoded.vaBank || bankCode})
+                </li>
+                <li>Tên TK: {result.decoded.vaName}</li>
+                <li>Số TK: {result.decoded.vaAccount}</li>
+                <li>Nội dung: {result.decoded.remark || '—'}</li>
+              </ul>
+              {result.sepayUrl ? (
+                <div className="mt-6 flex flex-col items-start gap-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">QR Sepay</p>
+                  <Image
+                    src={result.sepayUrl}
+                    alt="QR"
+                    width={220}
+                    height={220}
+                    unoptimized
+                    className="rounded-[var(--radius-app)] border border-slate-200"
+                  />
+                </div>
+              ) : null}
+            </Card>
+          ) : (
+            <Card variant="quiet" padding="lg" className="h-full min-h-[220px] border border-slate-200/90">
+              <p className="text-sm leading-relaxed text-slate-500">
+                Sau khi tạo thành công, mã VA và QR hiển thị tại đây để sao chép hoặc chia sẻ.
+              </p>
+            </Card>
+          )}
         </div>
       </div>
+    </div>
   );
 }

@@ -113,15 +113,24 @@ export default function ShopBankPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card padding="md" className="border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white">
+        <Card
+          padding="md"
+          className="border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <p className="text-[11px] uppercase tracking-wider text-emerald-700">Số dư hiện tại</p>
           <p className="mt-1 text-lg font-semibold text-emerald-800">{fmtVnd(balance)}</p>
         </Card>
-        <Card padding="md" className="border border-sky-200/80 bg-gradient-to-br from-sky-50 to-white">
+        <Card
+          padding="md"
+          className="border border-sky-200/80 bg-gradient-to-br from-sky-50 to-white transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <p className="text-[11px] uppercase tracking-wider text-sky-700">Ngân hàng trong kho</p>
           <p className="mt-1 text-lg font-semibold text-sky-800">{banksCount.toLocaleString('vi-VN')}</p>
         </Card>
-        <Card padding="md" className="border border-amber-200/80 bg-gradient-to-br from-amber-50 to-white">
+        <Card
+          padding="md"
+          className="border border-amber-200/80 bg-gradient-to-br from-amber-50 to-white transition hover:-translate-y-0.5 hover:shadow-md"
+        >
           <p className="text-[11px] uppercase tracking-wider text-amber-700">Tồn kho {selected?.bankCode || ''}</p>
           <p className="mt-1 text-lg font-semibold text-amber-800">
             {Number(selected?.stockCount || 0).toLocaleString('vi-VN')}
@@ -131,6 +140,10 @@ export default function ShopBankPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
         <Card padding="lg" className="border border-slate-200/90 bg-white/95 shadow-card">
+          <div className="mb-4">
+            <h2 className="font-display text-lg font-semibold text-slate-900">Mua tài khoản</h2>
+            <p className="mt-1 text-xs text-slate-500">Chọn ngân hàng và số lượng, hệ thống sẽ trừ số dư và trả dữ liệu ngẫu nhiên từ kho.</p>
+          </div>
           <form className="space-y-4" onSubmit={submit}>
             <div>
               <FieldLabel>Chọn ngân hàng</FieldLabel>
@@ -165,7 +178,7 @@ export default function ShopBankPage() {
                     key={n}
                     type="button"
                     onClick={() => setQuantity(n)}
-                    className={`rounded-md border px-2 py-1 text-xs transition ${
+                    className={`rounded-md border px-2 py-1 text-xs font-medium transition ${
                       quantity === n
                         ? 'border-accent/50 bg-accent/10 text-accent'
                         : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -209,14 +222,19 @@ export default function ShopBankPage() {
               </p>
             ) : null}
 
-            <Button type="submit" disabled={buying || !banks.length}>
+            <Button type="submit" disabled={buying || !banks.length} className="w-full transition sm:w-auto">
               {buying ? 'Đang mua...' : 'Mua ngay'}
             </Button>
           </form>
         </Card>
 
         <Card padding="lg" className="border border-slate-200/90 bg-white/95 shadow-card">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">Lịch sử mua gần đây</h3>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Lịch sử mua gần đây</h3>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+              {purchases.length} giao dịch
+            </span>
+          </div>
           {loading ? (
             <p className="text-sm text-slate-500">Đang tải...</p>
           ) : purchases.length ? (
@@ -224,7 +242,7 @@ export default function ShopBankPage() {
               {purchases.map((p) => (
                 <div
                   key={p.saleId}
-                  className="rounded-[var(--radius-app)] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-3"
+                  className="rounded-[var(--radius-app)] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-3 transition hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-slate-900">
@@ -246,7 +264,10 @@ export default function ShopBankPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">Chưa có giao dịch mua nào.</p>
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+              <p className="text-sm font-medium text-slate-700">Chưa có giao dịch mua nào</p>
+              <p className="mt-1 text-xs text-slate-500">Tạo giao dịch đầu tiên ở khung bên trái để xem lịch sử tại đây.</p>
+            </div>
           )}
         </Card>
       </div>

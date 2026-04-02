@@ -107,15 +107,37 @@ export default function ProfilePage() {
     <div className="space-y-6">
       <PageHeader eyebrow="Tài khoản" title="Profile" description="Thông tin tài khoản và bảo mật." />
 
-      <Card padding="lg">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card padding="sm" className="border-sky-200/80 bg-sky-50/60">
+          <p className="text-xs text-sky-700">Số dư</p>
+          <p className="text-sm font-semibold text-sky-900">{Number(user?.balance || 0).toLocaleString('vi-VN')} đ</p>
+        </Card>
+        <Card padding="sm" className="border-emerald-200/80 bg-emerald-50/60">
+          <p className="text-xs text-emerald-700">Số VA đã tạo</p>
+          <p className="text-sm font-semibold text-emerald-900">{Number(user?.createdVA || 0).toLocaleString('vi-VN')}</p>
+        </Card>
+        <Card padding="sm" className="border-amber-200/80 bg-amber-50/60">
+          <p className="text-xs text-amber-700">Trạng thái 2FA</p>
+          <p className="text-sm font-semibold text-amber-900">{user?.twoFactorEnabled ? 'Đang bật' : 'Đang tắt'}</p>
+        </Card>
+      </div>
+
+      {err ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700">{err}</div>
+      ) : null}
+      {msg ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">{msg}</div>
+      ) : null}
+
+      <Card padding="lg" className="border border-slate-200/90 bg-white/95 shadow-card">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Thông tin tài khoản</h3>
         <div className="grid gap-3 text-sm sm:grid-cols-2">
-          <p><span className="text-slate-500">User ID:</span> <span className="font-mono">{user?.id || '—'}</span></p>
-          <p><span className="text-slate-500">User:</span> <span className="font-medium">{user?.username || '—'}</span></p>
-          <p><span className="text-slate-500">Login:</span> <span className="font-medium">{user?.webLogin || '—'}</span></p>
-          <p><span className="text-slate-500">Họ tên:</span> <span className="font-medium">{user?.fullName || '—'}</span></p>
-          <p><span className="text-slate-500">SĐT:</span> <span className="font-medium">{user?.phone || '—'}</span></p>
-          <p><span className="text-slate-500">Email:</span> <span className="font-medium">{user?.email || '—'}</span></p>
+          <p><span className="text-slate-500">User ID:</span> <span className="font-mono font-semibold text-slate-900">{user?.id || '—'}</span></p>
+          <p><span className="text-slate-500">User:</span> <span className="font-medium text-slate-900">{user?.username || '—'}</span></p>
+          <p><span className="text-slate-500">Login:</span> <span className="font-medium text-slate-900">{user?.webLogin || '—'}</span></p>
+          <p><span className="text-slate-500">Họ tên:</span> <span className="font-medium text-slate-900">{user?.fullName || '—'}</span></p>
+          <p><span className="text-slate-500">SĐT:</span> <span className="font-medium text-slate-900">{user?.phone || '—'}</span></p>
+          <p><span className="text-slate-500">Email:</span> <span className="font-medium text-slate-900">{user?.email || '—'}</span></p>
           <p>
             <span className="text-slate-500">Telegram:</span>{' '}
             <span className="font-medium">
@@ -128,7 +150,7 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      <Card padding="lg">
+      <Card padding="lg" className="border border-slate-200/90 bg-white/95 shadow-card">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Đổi mật khẩu</h3>
         <form onSubmit={savePassword} className="grid gap-3 sm:max-w-lg">
           <div>
@@ -143,11 +165,11 @@ export default function ProfilePage() {
             <FieldLabel>Nhập lại mật khẩu mới</FieldLabel>
             <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={fieldInputClass} />
           </div>
-          <Button type="submit" disabled={savingPassword}>{savingPassword ? 'Đang lưu…' : 'Đổi mật khẩu'}</Button>
+          <Button type="submit" disabled={savingPassword} className="w-full sm:w-auto">{savingPassword ? 'Đang lưu…' : 'Đổi mật khẩu'}</Button>
         </form>
       </Card>
 
-      <Card padding="lg">
+      <Card padding="lg" className="border border-slate-200/90 bg-white/95 shadow-card">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Bảo mật 2FA (email)</h3>
         <form onSubmit={save2fa} className="grid gap-3 sm:max-w-lg">
           <label className="inline-flex items-center gap-2 text-sm text-slate-700">
@@ -158,13 +180,10 @@ export default function ProfilePage() {
             <FieldLabel>Xác nhận mật khẩu hiện tại</FieldLabel>
             <input type="password" value={twoFactorPassword} onChange={(e) => setTwoFactorPassword(e.target.value)} className={fieldInputClass} />
           </div>
-          <Button type="submit" disabled={saving2fa}>{saving2fa ? 'Đang lưu…' : 'Lưu 2FA'}</Button>
+          <Button type="submit" disabled={saving2fa} className="w-full sm:w-auto">{saving2fa ? 'Đang lưu…' : 'Lưu 2FA'}</Button>
           <p className="text-xs text-slate-500">Khi bật 2FA, sau bước mật khẩu hệ thống sẽ gửi mã OTP qua email để xác thực đăng nhập.</p>
         </form>
       </Card>
-
-      {err ? <p className="text-sm font-medium text-rose-500">{err}</p> : null}
-      {msg ? <p className="text-sm font-medium text-emerald-500">{msg}</p> : null}
     </div>
   );
 }

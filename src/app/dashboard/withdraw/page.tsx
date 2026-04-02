@@ -30,6 +30,13 @@ export default function WithdrawPage() {
     () => IBFT_BANK_PICK_CODES.map((c) => ({ code: c, name: getIbftBankLabel(c) })),
     [],
   );
+  const inputAmount = useMemo(() => Number(String(amount || '').replace(/\D/g, '')) || 0, [amount]);
+  const estimatedReceive = useMemo(() => {
+    const feePercent = Math.max(0, Number(feeInfo?.feePercent || 0));
+    const withdrawFlat = Math.max(0, Number(feeInfo?.withdrawFeeFlat || 0));
+    const percentFee = Math.floor((inputAmount * feePercent) / 100);
+    return Math.max(0, inputAmount - percentFee - withdrawFlat);
+  }, [amount, feeInfo, inputAmount]);
 
   useEffect(() => {
     let mounted = true;
@@ -109,7 +116,7 @@ export default function WithdrawPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         eyebrow="Thanh toán"
         title="Rút tiền"
@@ -152,7 +159,11 @@ export default function WithdrawPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,560px)_minmax(280px,1fr)]">
-        <Card padding="lg">
+        <Card padding="lg" className="border border-slate-200/90 bg-white/95 shadow-card">
+          <div className="mb-4">
+            <h2 className="font-display text-lg font-semibold text-slate-900">Tạo yêu cầu rút tiền</h2>
+            <p className="mt-1 text-xs text-slate-500">Điền đúng ngân hàng, số tài khoản và chủ tài khoản để tránh bị từ chối lệnh.</p>
+          </div>
           <form onSubmit={submit} className="space-y-6">
             <div>
             <FieldLabel>Ngân hàng</FieldLabel>
@@ -226,20 +237,32 @@ export default function WithdrawPage() {
                 required
               />
             </div>
+            <div className="rounded-[var(--radius-app)] border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+              <p>
+                Tiền nhập: <span className="font-semibold text-slate-800">{inputAmount.toLocaleString('vi-VN')} đ</span>
+              </p>
+              <p>
+                Dự kiến thực nhận: <span className="font-semibold text-emerald-700">{estimatedReceive.toLocaleString('vi-VN')} đ</span>
+              </p>
+            </div>
             {msg ? (
               <p
-                className={`text-sm font-medium ${msg.startsWith('Đã tạo') ? 'text-emerald-400' : 'text-rose-400'}`}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                  msg.startsWith('Đã tạo')
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-rose-200 bg-rose-50 text-rose-700'
+                }`}
               >
                 {msg}
               </p>
             ) : null}
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading ? 'Đang gửi…' : 'Gửi yêu cầu'}
             </Button>
           </form>
         </Card>
 
-        <Card padding="lg" className="h-fit">
+        <Card padding="lg" className="h-fit border border-slate-200/90 bg-white/95 shadow-card">
           <div className="space-y-3">
             <FieldLabel>Tài khoản đã lưu</FieldLabel>
             <p className="text-xs text-slate-500">Bấm để điền nhanh ngân hàng, STK và chủ tài khoản.</p>
