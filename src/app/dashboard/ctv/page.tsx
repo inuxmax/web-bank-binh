@@ -48,6 +48,8 @@ export default function DashboardCtvPage() {
   const [applying, setApplying] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [referredPageSize, setReferredPageSize] = useState(10);
+  const [referredPage, setReferredPage] = useState(1);
 
   async function load() {
     setLoading(true);
@@ -67,6 +69,9 @@ export default function DashboardCtvPage() {
   useEffect(() => {
     void load();
   }, []);
+  useEffect(() => {
+    setReferredPage(1);
+  }, [referredPageSize, data?.shareCode, data?.referralUsers]);
 
   async function applyCtv() {
     setErr('');
@@ -86,6 +91,19 @@ export default function DashboardCtvPage() {
     setMsg('Đã gửi đăng ký CTV. Vui lòng chờ admin duyệt.');
     setData((prev) => (prev ? { ...prev, status: 'pending' } : prev));
     await load();
+  }
+
+  async function copyText(value: string, label: string) {
+    const text = String(value || '').trim();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setErr('');
+      setMsg(`Đã copy ${label}.`);
+    } catch {
+      setMsg('');
+      setErr(`Không copy được ${label} trên trình duyệt này.`);
+    }
   }
 
   return (
@@ -142,11 +160,37 @@ export default function DashboardCtvPage() {
               <p className="text-sm text-slate-500">Mã chia sẻ</p>
               {data.isApproved ? (
                 <>
-                  <p className="mt-1 font-mono text-base font-semibold text-slate-900">{data.shareCode || '—'}</p>
-                  <p className="mt-3 text-sm text-slate-500">Link chia sẻ</p>
-                  <p className="mt-1 break-all rounded-md bg-slate-50 px-2 py-1 font-mono text-xs text-accent">
-                    {data.shareLink || '—'}
-                  </p>
+                  <div className="mt-3 rounded-[var(--radius-app)] border border-accent/25 bg-gradient-to-br from-accent/10 via-white to-emerald-50/80 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] uppercase tracking-[0.12em] text-accent">Mã CTV của bạn</p>
+                      <button
+                        type="button"
+                        onClick={() => void copyText(data.shareCode || '', 'mã chia sẻ')}
+                        className="rounded-md border border-accent/30 bg-white px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/5"
+                      >
+                        Copy mã
+                      </button>
+                    </div>
+                    <p className="mt-2 inline-flex rounded-lg bg-slate-900 px-3 py-1.5 font-mono text-base font-bold tracking-wide text-emerald-300">
+                      {data.shareCode || '—'}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-[var(--radius-app)] border border-slate-200 bg-slate-50/80 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">Link chia sẻ</p>
+                      <button
+                        type="button"
+                        onClick={() => void copyText(data.shareLink || '', 'link chia sẻ')}
+                        className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                      >
+                        Copy link
+                      </button>
+                    </div>
+                    <p className="mt-2 break-all rounded-md bg-white px-2 py-1.5 font-mono text-xs text-accent">
+                      {data.shareLink || '—'}
+                    </p>
+                  </div>
                 </>
               ) : (
                 <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -206,48 +250,105 @@ export default function DashboardCtvPage() {
           </div>
 
           <div className="rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1 p-4">
-            <p className="text-sm font-medium text-slate-700">Danh sách user đã giới thiệu</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-700">Danh sách user đã giới thiệu</p>
+                <p className="mt-1 text-xs text-slate-500">Theo dõi user đăng ký qua mã CTV và số lượt VA đã thanh toán.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Hiển thị</span>
+                {[10, 50, 100].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setReferredPageSize(n)}
+                    className={`rounded-[var(--radius-app)] px-2.5 py-1 text-xs font-medium ${
+                      referredPageSize === n
+                        ? 'bg-accent text-on-accent'
+                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+                <span className="text-xs text-slate-500">/ trang</span>
+              </div>
+            </div>
             {!data.referredUsers || data.referredUsers.length === 0 ? (
               <p className="mt-2 text-sm text-slate-500">Chưa có user nào đăng ký qua mã giới thiệu của bạn.</p>
             ) : (
-              <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200/90">
-                <table className="w-full min-w-[760px] text-left text-xs">
-                  <thead className="bg-surface-2/80 text-[10px] uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="p-2">User</th>
-                      <th className="p-2">Họ tên</th>
-                      <th className="p-2">ID</th>
-                      <th className="p-2">Trạng thái</th>
-                      <th className="p-2">Đăng ký</th>
-                      <th className="p-2">Lượt VA đã thanh toán</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.referredUsers.map((u) => (
-                      <tr key={u.id} className="border-t border-slate-100">
-                        <td className="p-2 font-medium text-slate-800">{u.username || '—'}</td>
-                        <td className="p-2">{u.fullName || '—'}</td>
-                        <td className="p-2 font-mono text-[11px] text-slate-600">{u.id}</td>
-                        <td className="p-2">
-                          {u.isActive ? (
-                            <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                              Đã duyệt
-                            </span>
-                          ) : (
-                            <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                              Chờ duyệt
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-2 whitespace-nowrap text-slate-600">{fmtTs(u.registerAt)}</td>
-                        <td className="p-2 font-semibold text-slate-800">
-                          {Number(u.paidVaCount || 0).toLocaleString('vi-VN')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              (() => {
+                const total = data.referredUsers.length;
+                const totalPages = Math.max(1, Math.ceil(total / referredPageSize));
+                const safePage = Math.min(Math.max(1, referredPage), totalPages);
+                const start = (safePage - 1) * referredPageSize;
+                const rows = data.referredUsers.slice(start, start + referredPageSize);
+                return (
+                  <>
+                    <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200/90 shadow-inner-glow">
+                      <table className="w-full min-w-[760px] text-left text-xs">
+                        <thead className="bg-surface-2/80 text-[10px] uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="p-2">User</th>
+                            <th className="p-2">Họ tên</th>
+                            <th className="p-2">ID</th>
+                            <th className="p-2">Trạng thái</th>
+                            <th className="p-2">Đăng ký</th>
+                            <th className="p-2">Lượt VA đã thanh toán</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((u) => (
+                            <tr key={u.id} className="border-t border-slate-100 hover:bg-slate-50/70">
+                              <td className="p-2 font-medium text-slate-800">{u.username || '—'}</td>
+                              <td className="p-2">{u.fullName || '—'}</td>
+                              <td className="p-2 font-mono text-[11px] text-slate-600">{u.id}</td>
+                              <td className="p-2">
+                                {u.isActive ? (
+                                  <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                                    Đã duyệt
+                                  </span>
+                                ) : (
+                                  <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                                    Chờ duyệt
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-2 whitespace-nowrap text-slate-600">{fmtTs(u.registerAt)}</td>
+                              <td className="p-2 font-semibold text-slate-800">
+                                {Number(u.paidVaCount || 0).toLocaleString('vi-VN')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                      <span>
+                        Trang {safePage}/{totalPages} · {total} user
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setReferredPage((p) => Math.max(1, p - 1))}
+                          disabled={safePage <= 1}
+                          className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                        >
+                          Trước
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setReferredPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={safePage >= totalPages}
+                          className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                        >
+                          Sau
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
             )}
           </div>
 
