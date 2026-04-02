@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getSession } from '@/lib/get-session';
 import { getSessionAdminPermissions, hasAdminPermission } from '@/lib/server/admin-permissions';
 import { listVirtualAccounts, revokeVirtualAccount } from '@/lib/server/hpay';
+import * as db from '@/lib/server/db';
 
 export const runtime = 'nodejs';
 
@@ -31,6 +32,27 @@ function normalizeVaItems(decoded: Record<string, unknown> | null): Record<strin
   return [];
 }
 
+function fallbackItemsFromDb(rows: Record<string, unknown>[]) {
+  const map = new Map<string, Record<string, unknown>>();
+  const sorted = rows
+    .slice()
+    .sort((a, b) => (Number(b.createdAt || 0) || 0) - (Number(a.createdAt || 0) || 0));
+  for (const r of sorted) {
+    const vaAccount = String(r.vaAccount || '').trim();
+    if (!vaAccount) continue;
+    if (map.has(vaAccount)) continue;
+    map.set(vaAccount, {
+      vaAccount,
+      vaName: String(r.vaName || r.name || '').trim(),
+      bankCode: String(r.vaBank || '').trim(),
+      remark: String(r.remark || r.transferContent || '').trim(),
+      status: String(r.status || '').trim() || '—',
+      createdAt: Number(r.createdAt || 0) || 0,
+    });
+  }
+  return Array.from(map.values());
+}
+
 const deleteSchema = z.object({
   vaAccounts: z.array(z.string().min(1)).min(1).max(500),
 });
@@ -45,13 +67,20 @@ export async function GET(req: Request) {
 
   try {
     const response = await listVirtualAccounts({ size, page });
-    const items = normalizeVaItems(response.decoded);
+    let items = normalizeVaItems(response.decoded);
+    let source: 'hpay' | 'db_fallback' = 'hpay';
+    if (!items.length) {
+      const localRows = await db.loadAll();
+      items = fallbackItemsFromDb(localRows as unknown as Record<string, unknown>[]);
+      source = 'db_fallback';
+    }
     return NextResponse.json({
       ok: true,
       items,
       raw: response.raw,
       requestId: response.requestId,
       total: items.length,
+      source,
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message || 'Không tải được danh sách VA' }, { status: 500 });
