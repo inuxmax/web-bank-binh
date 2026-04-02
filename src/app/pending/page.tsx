@@ -37,17 +37,6 @@ export default async function PendingPage() {
               @lieunhuyenbet
             </a>
           </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Liên hệ tele phụ do tele chính bị khóa cấm chat:{' '}
-            <a
-              href="https://t.me/lieunhuyen02"
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold text-accent hover:underline"
-            >
-              @lieunhuyen02
-            </a>
-          </p>
           <code className="mt-6 inline-block rounded-[var(--radius-app)] border border-slate-200 bg-surface-2/80 px-5 py-3 font-mono text-sm text-accent">
             {u.id}
           </code>

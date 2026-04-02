@@ -203,14 +203,6 @@ export default function DashboardCtvPage() {
                   >
                     Liên hệ admin Telegram: @lieunhuyenbet
                   </a>
-                  <a
-                    href="https://t.me/lieunhuyen02"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-flex rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                  >
-                    Liên hệ tele phụ do tele chính bị khóa cấm chat: @lieunhuyen02
-                  </a>
                   <p className="mt-2 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700">
                     ⚠️ Tính năng CTV đang code dở vẫn chưa xong, vui lòng chờ 1-2 ngày.
                   </p>

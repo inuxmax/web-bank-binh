@@ -102,17 +102,6 @@ export default async function DashboardPage() {
                   @lieunhuyenbet
                 </a>
               </p>
-              <p className="mt-1 text-xs text-slate-600">
-                Liên hệ tele phụ do tele chính bị khóa cấm chat:{' '}
-                <a
-                  href="https://t.me/lieunhuyen02"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-semibold text-accent hover:underline"
-                >
-                  @lieunhuyen02
-                </a>
-              </p>
             </div>
           </div>
 
@@ -120,7 +109,7 @@ export default async function DashboardPage() {
             <StatTile
               label="Số dư khả dụng"
               value={
-                <span className="bg-gradient-to-br from-slate-900 via-slate-800 to-accent bg-clip-text text-transparent">
+                <span className="font-semibold text-accent">
                   {balance.toLocaleString('vi-VN')} đ
                 </span>
               }
