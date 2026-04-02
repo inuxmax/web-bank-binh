@@ -70,6 +70,8 @@ export default function AdminIbftPage() {
   const [history, setHistory] = useState<IbftHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
+  const [historyPage, setHistoryPage] = useState(1);
   const bankOptions = IBFT_BANKS.filter((b) => {
     const q = bankKeyword.trim().toLowerCase();
     if (!q) return true;
@@ -81,7 +83,14 @@ export default function AdminIbftPage() {
     try {
       const res = await fetch(`/api/admin/withdrawals?status=pending&_ts=${Date.now()}`, { cache: 'no-store' });
       const j = await res.json();
-      setWithdrawals(Array.isArray(j.items) ? (j.items as WithdrawalItem[]) : []);
+      const rows = Array.isArray(j.items) ? (j.items as WithdrawalItem[]) : [];
+      setWithdrawals(
+        rows.filter((x) => {
+          const hasRef = Boolean(String(x.id || x.mongoId || '').trim());
+          const hasUser = Boolean(String(x.userId || '').trim()) && Boolean(String(x.username || '').trim());
+          return hasRef && hasUser;
+        }),
+      );
     } finally {
       setLoadingWithdrawals(false);
     }
@@ -95,9 +104,13 @@ export default function AdminIbftPage() {
   async function loadHistory() {
     setLoadingHistory(true);
     try {
-      const res = await fetch('/api/admin/ibft-history?limit=30');
+      const res = await fetch('/api/admin/ibft-history?limit=500');
       const j = await res.json().catch(() => ({}));
-      setHistory(Array.isArray(j.items) ? (j.items as IbftHistoryItem[]) : []);
+      const rows = Array.isArray(j.items) ? (j.items as IbftHistoryItem[]) : [];
+      setHistory(
+        rows.filter((x) => Boolean(String(x.userId || '').trim()) && Boolean(String(x.username || '').trim())),
+      );
+      setHistoryPage(1);
     } finally {
       setLoadingHistory(false);
     }
@@ -105,6 +118,16 @@ export default function AdminIbftPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const hasLinked = Boolean(String(selectedWithdrawal?.id || selectedWithdrawal?.mongoId || '').trim());
+    const hasUser = Boolean(String(selectedWithdrawal?.userId || '').trim()) && Boolean(String(selectedWithdrawal?.username || '').trim());
+    if (!hasLinked || !hasUser) {
+      setResult({
+        ok: false,
+        title: 'Thiếu liên kết lệnh rút',
+        detail: 'Vui lòng chọn đúng yêu cầu có ID và USER từ danh sách bên phải.',
+      });
+      return;
+    }
     setLoading(true);
     setResult(null);
     try {
@@ -355,6 +378,9 @@ export default function AdminIbftPage() {
                     <p className="mt-1 text-xs text-slate-500">
                       User: {String(w.username || '—')} · ID: {String(w.userId || '—')}
                     </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Mã GD: <span className="font-mono">{String(w.id || w.mongoId || '—')}</span>
+                    </p>
                     <p className="mt-2 text-xs">
                       <span className="font-semibold text-rose-600">
                         Số tiền: {Number(w.amount || 0).toLocaleString('vi-VN')}đ
@@ -378,9 +404,25 @@ export default function AdminIbftPage() {
             <h3 className="font-display text-lg font-semibold tracking-tight text-slate-900">Lịch sử chi hộ gần nhất</h3>
             <p className="text-xs text-slate-500">Hiển thị mã lỗi, nội dung lỗi, trạng thái và thông tin tài khoản nhận.</p>
           </div>
-          <Button type="button" variant="secondary" onClick={() => void loadHistory()} disabled={loadingHistory}>
-            Làm mới
-          </Button>
+          <div className="flex items-center gap-2">
+            <select
+              value={historyPageSize}
+              onChange={(e) => {
+                setHistoryPageSize(Number(e.target.value || 10));
+                setHistoryPage(1);
+              }}
+              className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700"
+            >
+              {[10, 50, 100].map((n) => (
+                <option key={n} value={n}>
+                  {n}/trang
+                </option>
+              ))}
+            </select>
+            <Button type="button" variant="secondary" onClick={() => void loadHistory()} disabled={loadingHistory}>
+              Làm mới
+            </Button>
+          </div>
         </div>
         <div className="mt-4 space-y-3">
           {history.length === 0 ? (
@@ -388,12 +430,42 @@ export default function AdminIbftPage() {
               {loadingHistory ? 'Đang tải lịch sử...' : 'Chưa có lịch sử chi hộ.'}
             </p>
           ) : (
-            history.map((it, idx) => {
+            (() => {
+              const totalPages = Math.max(1, Math.ceil(history.length / historyPageSize));
+              const safePage = Math.min(Math.max(1, historyPage), totalPages);
+              const start = (safePage - 1) * historyPageSize;
+              const rows = history.slice(start, start + historyPageSize);
+              return (
+                <>
+                  <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
+                    <span>
+                      Trang {safePage}/{totalPages} · {history.length} giao dịch
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                        disabled={safePage <= 1}
+                        className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                      >
+                        Trước
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={safePage >= totalPages}
+                        className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                      >
+                        Sau
+                      </button>
+                    </div>
+                  </div>
+                  {rows.map((it, idx) => {
               const code = String(it.errorCode || '');
               const isOk = code === '00';
               return (
                 <div
-                  key={`${String(it.ts || 0)}-${idx}`}
+                  key={`${String(it.ts || 0)}-${start + idx}`}
                   className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
                 >
                   <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -422,14 +494,17 @@ export default function AdminIbftPage() {
                   </p>
                   <p className="mt-1 text-sm text-slate-600">
                     Số tiền: <span className="font-semibold text-accent">{Number(it.amount || 0).toLocaleString('vi-VN')}đ</span>
-                    {' · '}Order: <span className="font-mono text-xs">{String(it.orderId || '—')}</span>
+                    {' · '}Mã GD: <span className="font-mono text-xs">{String(it.orderId || '—')}</span>
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
                     Ghi chú: {String(it.remark || '—')} {' · '}Phản hồi: {String(it.errorMessage || '—')}
                   </p>
                 </div>
               );
-            })
+            })}
+                </>
+              );
+            })()
           )}
         </div>
       </Card>

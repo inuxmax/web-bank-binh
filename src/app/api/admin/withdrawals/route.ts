@@ -26,7 +26,8 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status') || undefined;
-  const [items, users] = await Promise.all([db.getWithdrawals({ status, limit: 200 }), db.getAllUsers()]);
+  const limit = Math.min(1000, Math.max(1, Number(searchParams.get('limit')) || 500));
+  const [items, users] = await Promise.all([db.getWithdrawals({ status, limit }), db.getAllUsers()]);
   const userMap = new Map(users.map((u) => [String(u.id), u]));
   return NextResponse.json({
     items: items.map((it) => {

@@ -191,7 +191,10 @@ export async function POST(req: Request) {
       accountName: accountNameNormalized || parsed.accountName,
       amount: Number(parsed.amount),
       remark: parsed.remark,
-      orderId: decoded && String((decoded as Record<string, unknown>).orderId || ''),
+      orderId:
+        (decoded && String((decoded as Record<string, unknown>).orderId || '')) ||
+        String(requestId || '') ||
+        String(linkedWithdrawal?.id || linkedWithdrawal?.mongoId || ''),
       tranStatus: decoded && String((decoded as Record<string, unknown>).tranStatus || ''),
       errorCode: String(raw.errorCode || ''),
       errorMessage: String(raw.errorMessage || ''),

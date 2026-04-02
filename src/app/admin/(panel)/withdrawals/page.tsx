@@ -19,13 +19,18 @@ export default function AdminWithdrawalsPage() {
   const popup = useAppPopup();
   const [status, setStatus] = useState<string>('pending');
   const [items, setItems] = useState<W[]>([]);
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
 
   async function load() {
     const url =
-      status === '' ? '/api/admin/withdrawals' : `/api/admin/withdrawals?status=${encodeURIComponent(status)}`;
+      status === ''
+        ? '/api/admin/withdrawals?limit=1000'
+        : `/api/admin/withdrawals?status=${encodeURIComponent(status)}&limit=1000`;
     const res = await fetch(url);
     const d = await res.json();
     setItems(d.items || []);
+    setPage(1);
   }
 
   useEffect(() => {
@@ -101,10 +106,56 @@ export default function AdminWithdrawalsPage() {
           </button>
         ))}
       </div>
+      <div className="mt-3 flex items-center gap-2">
+        <select
+          value={pageSize}
+          onChange={(e) => {
+            setPageSize(Number(e.target.value || 10));
+            setPage(1);
+          }}
+          className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700"
+        >
+          {[10, 50, 100].map((n) => (
+            <option key={n} value={n}>
+              {n}/trang
+            </option>
+          ))}
+        </select>
+      </div>
       <ul className="mt-8 space-y-3">
-        {items.map((w, idx) => (
+        {(() => {
+          const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+          const safePage = Math.min(Math.max(1, page), totalPages);
+          const start = (safePage - 1) * pageSize;
+          const rows = items.slice(start, start + pageSize);
+          return (
+            <>
+              <li className="mb-1 flex items-center justify-between text-xs text-slate-500">
+                <span>
+                  Trang {safePage}/{totalPages} · {items.length} giao dịch
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                  >
+                    Trước
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </li>
+              {rows.map((w, idx) => (
           <li
-            key={String(w.id || w.mongoId || `row-${idx}`)}
+            key={String(w.id || w.mongoId || `row-${start + idx}`)}
             className={`relative rounded-[var(--radius-app-lg)] border bg-surface-1/95 p-5 text-sm text-slate-800 shadow-inner-glow ${
               w.isVerified === true
                 ? 'border-rose-200 bg-rose-50/35 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]'
@@ -163,6 +214,9 @@ export default function AdminWithdrawalsPage() {
             <p className="mt-1 text-xs text-slate-500">
               User: {String(w.username || '—')} · ID: {String(w.userId || '—')}
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Mã GD: <span className="font-mono">{String(w.id || w.mongoId || '—')}</span>
+            </p>
             <p className="mt-1">
               Số tiền: {Number(w.amount || 0).toLocaleString('vi-VN')}đ · Thực nhận:{' '}
               {Number(w.actualReceive || 0).toLocaleString('vi-VN')}đ
@@ -204,6 +258,9 @@ export default function AdminWithdrawalsPage() {
             )}
           </li>
         ))}
+            </>
+          );
+        })()}
       </ul>
     </div>
   );
