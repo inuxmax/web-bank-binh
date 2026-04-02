@@ -64,6 +64,22 @@ function num(v: unknown) {
   return isNegative ? -n : n;
 }
 
+function pickSimBasePrice(row: Record<string, unknown>) {
+  const basePrice = num(row.basePrice);
+  if (basePrice > 0) return basePrice;
+  const providerRaw = row.providerRaw;
+  if (providerRaw && typeof providerRaw === 'object') {
+    const fromProvider = num((providerRaw as Record<string, unknown>).price);
+    if (fromProvider > 0) return fromProvider;
+  }
+  const price = num(row.price);
+  const markup = Number(row.markupPercent || 0);
+  if (price > 0 && Number.isFinite(markup) && markup > 0) {
+    return Math.max(0, Math.round(price / (1 + markup / 100)));
+  }
+  return 0;
+}
+
 export async function GET(req: Request) {
   const session = await getSession();
   if (!session.userId || !session.isAdmin) {
@@ -88,11 +104,12 @@ export async function GET(req: Request) {
     const statsResetAt = Number((cfg as { statsResetAt?: number }).statsResetAt || 0) || 0;
     const effectiveFromTs = Math.max(fromTs, statsResetAt);
 
-    const [va, wd, users, userBalanceHistory] = await Promise.all([
+    const [va, wd, users, userBalanceHistory, simOrders] = await Promise.all([
       db.loadAll(),
       db.loadWithdrawals(),
       db.getAllUsers(),
       db.loadUserBalanceHistory(),
+      db.loadSimRentOrders(),
     ]);
 
     const primaryVa = va.filter((r) => !String((r as { parentRequestId?: string }).parentRequestId || '').trim());
@@ -122,6 +139,13 @@ export async function GET(req: Request) {
     const totalCtv = users.filter((u) => String(u.ctvStatus || '') === 'approved' && inRange(u.ctvApprovedAt, effectiveFromTs, toTs)).length;
     const platformFeeAmount = Math.round(totalTransactionAmount * 0.03);
     const totalProfit = totalTransactionAmount - totalIbftAmount - platformFeeAmount;
+    const totalSimRentProfit = (simOrders as Record<string, unknown>[])
+      .filter((o) => inRange(o.createdAt, effectiveFromTs, toTs))
+      .reduce((sum, o) => {
+        const price = num(o.price);
+        const basePrice = pickSimBasePrice(o);
+        return sum + Math.max(0, price - basePrice);
+      }, 0);
 
     return NextResponse.json({
       ok: true,
@@ -142,6 +166,7 @@ export async function GET(req: Request) {
         totalCtv,
         platformFeeAmount,
         totalProfit,
+        totalSimRentProfit,
       },
     });
   } catch (e) {

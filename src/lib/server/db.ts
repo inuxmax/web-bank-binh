@@ -267,6 +267,10 @@ export async function countSimRentOrdersByUser(userId: string): Promise<number> 
   return mongo.countSimRentOrdersByUser(userId);
 }
 
+export async function loadSimRentOrders(): Promise<Record<string, unknown>[]> {
+  return mongo.loadSimRentOrders();
+}
+
 export async function getPendingSimRentOrdersByUser(userId: string, limit?: number): Promise<Record<string, unknown>[]> {
   return mongo.getPendingSimRentOrdersByUser(userId, limit);
 }

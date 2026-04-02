@@ -777,7 +777,9 @@ export async function addSimRentOrder(entry: Record<string, unknown>): Promise<R
     status: String(entry.status || 'PENDING'),
     otp: String(entry.otp || ''),
     smsContent: String(entry.smsContent || ''),
+    basePrice: Number(entry.basePrice || 0),
     price: Number(entry.price || 0),
+    markupPercent: Number(entry.markupPercent || 0),
     isSentSms: Boolean(entry.isSentSms),
     statusDescription: String(entry.statusDescription || ''),
     createdAt: Number(entry.createdAt || now),
@@ -829,6 +831,15 @@ export async function countSimRentOrdersByUser(userId: string): Promise<number> 
   const uid = String(userId || '').trim();
   if (!uid) return 0;
   return SimRentOrderModel.countDocuments({ userId: uid });
+}
+
+export async function loadSimRentOrders(): Promise<Record<string, unknown>[]> {
+  await connectMongo();
+  const rows = await SimRentOrderModel.find().lean();
+  return rows.map((r) => {
+    const { _id, __v, ...rest } = r as Record<string, unknown>;
+    return rest;
+  });
 }
 
 export async function getPendingSimRentOrdersByUser(

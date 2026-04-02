@@ -12,6 +12,7 @@ type Totals = {
   totalCtv: number;
   platformFeeAmount: number;
   totalProfit: number;
+  totalSimRentProfit: number;
 };
 
 function ymdNow() {
@@ -37,6 +38,7 @@ export function AdminStatsOverview() {
     totalCtv: 0,
     platformFeeAmount: 0,
     totalProfit: 0,
+    totalSimRentProfit: 0,
   });
 
   const query = useMemo(() => {
@@ -69,6 +71,7 @@ export function AdminStatsOverview() {
           totalCtv: Number(j?.totals?.totalCtv || 0),
           platformFeeAmount: Number(j?.totals?.platformFeeAmount || 0),
           totalProfit: Number(j?.totals?.totalProfit || 0),
+          totalSimRentProfit: Number(j?.totals?.totalSimRentProfit || 0),
         });
         setStatsResetAt(Number(j?.range?.statsResetAt || 0));
       } finally {
@@ -112,6 +115,7 @@ export function AdminStatsOverview() {
           totalCtv: Number(d2?.totals?.totalCtv || 0),
           platformFeeAmount: Number(d2?.totals?.platformFeeAmount || 0),
           totalProfit: Number(d2?.totals?.totalProfit || 0),
+          totalSimRentProfit: Number(d2?.totals?.totalSimRentProfit || 0),
         });
         setErr('');
       }
@@ -177,7 +181,7 @@ export function AdminStatsOverview() {
       ) : null}
 
       {err ? <p className="text-sm text-rose-500">{err}</p> : null}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <div className="rounded-[var(--radius-app-lg)] border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-700">Tổng VA tạo</p>
           <p className="mt-1 text-2xl font-bold text-slate-900">{loading ? '...' : totals.totalVaCreated.toLocaleString('vi-VN')}</p>
@@ -200,6 +204,13 @@ export function AdminStatsOverview() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-rose-700">Lãi</p>
           <p className="mt-1 text-2xl font-bold text-slate-900">{loading ? '...' : `${totals.totalProfit.toLocaleString('vi-VN')} đ`}</p>
           <p className="mt-1 text-[11px] text-rose-700/80">= Giao dịch - Chi hộ - Phí sàn 3%</p>
+        </div>
+        <div className="rounded-[var(--radius-app-lg)] border border-cyan-200 bg-gradient-to-br from-cyan-50 to-white p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-700">Lợi nhuận thuê Sim</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
+            {loading ? '...' : `${totals.totalSimRentProfit.toLocaleString('vi-VN')} đ`}
+          </p>
+          <p className="mt-1 text-[11px] text-cyan-700/80">= Giá bán - Giá gốc API</p>
         </div>
       </div>
     </div>
