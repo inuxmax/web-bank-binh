@@ -49,7 +49,6 @@ const PREFIX_OPTIONS = [
 
 const createSchema = z.object({
   serviceId: z.string().min(1),
-  serviceName: z.string().optional(),
   network: z.string().optional(),
   prefixs: z.string().optional(),
   excludePrefixs: z.string().optional(),
@@ -88,6 +87,19 @@ async function bossGet(path: string, query: Record<string, unknown>) {
   const res = await fetch(url, { method: 'GET', cache: 'no-store' });
   const json = await res.json().catch(() => ({}));
   return { ok: res.ok, status: res.status, json };
+}
+
+async function fetchServiceCatalog() {
+  const servicesResV4 = await bossGet('/api/v4/service-manager/services', {});
+  const servicesRaw = Array.isArray(servicesResV4.json)
+    ? servicesResV4.json
+    : Array.isArray((servicesResV4.json as { data?: unknown[] })?.data)
+      ? ((servicesResV4.json as { data?: unknown[] }).data as unknown[])
+      : [];
+  return servicesRaw
+    .filter((x) => x && typeof x === 'object')
+    .map((x) => normalizeServiceItem(x as Record<string, unknown>))
+    .filter((x) => x.id);
 }
 
 function normalizeServiceItem(raw: Record<string, unknown>) {
@@ -152,28 +164,16 @@ export async function GET(req: Request) {
 
   await refreshPending(session.userId, token, markupPercent);
 
-  const [servicesResV4, balanceRes, orders, total] = await Promise.all([
-    bossGet('/api/v4/service-manager/services', {}),
-    bossGet('/api/v4/users/me/balance', { api_token: token }),
+  const [services, orders, total] = await Promise.all([
+    fetchServiceCatalog(),
     db.getSimRentOrdersByUser(session.userId, limit, offset),
     db.countSimRentOrdersByUser(session.userId),
   ]);
-
-  const servicesRaw = Array.isArray(servicesResV4.json)
-    ? servicesResV4.json
-    : Array.isArray((servicesResV4.json as { data?: unknown[] })?.data)
-      ? ((servicesResV4.json as { data?: unknown[] }).data as unknown[])
-      : [];
-  const services = servicesRaw
-    .filter((x) => x && typeof x === 'object')
-    .map((x) => normalizeServiceItem(x as Record<string, unknown>))
-    .filter((x) => x.id);
 
   return NextResponse.json({
     services,
     networkOptions: NETWORK_OPTIONS,
     prefixOptions: PREFIX_OPTIONS,
-    balance: Number((balanceRes.json as { balance?: number })?.balance || 0),
     items: orders,
     markupPercent,
     total,
@@ -199,34 +199,74 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const data = createSchema.parse(body);
+    const services = await fetchServiceCatalog();
+    const service = services.find((s) => s.id === data.serviceId);
+    if (!service) {
+      return NextResponse.json({ error: 'Dịch vụ không tồn tại' }, { status: 400 });
+    }
+    if (data.network && !NETWORK_OPTIONS.includes(String(data.network).toUpperCase())) {
+      return NextResponse.json({ error: 'Nhà mạng không hợp lệ' }, { status: 400 });
+    }
+
+    const quotedBasePrice = Number(service.price || 0);
+    const quotedPrice = applyMarkup(quotedBasePrice, markupPercent);
+    const userBefore = await db.getUser(session.userId);
+    const balanceBefore = Number(userBefore.balance || 0);
+    if (balanceBefore < quotedPrice) {
+      return NextResponse.json({ error: 'Số dư không đủ để tạo yêu cầu thuê sim' }, { status: 400 });
+    }
+
+    const orderRef = `SIMRENT${Date.now()}${Math.floor(100 + Math.random() * 900)}`;
+    const nextBalance = balanceBefore - quotedPrice;
+    await db.updateUser(session.userId, { balance: nextBalance });
+    await db.addUserBalanceHistory({
+      ts: Date.now(),
+      userId: session.userId,
+      delta: -quotedPrice,
+      balanceAfter: nextBalance,
+      reason: 'sim_rent_create',
+      ref: orderRef,
+    });
+
     const created = await bossGet('/api/v4/rents/create', {
       api_token: token,
       service_id: data.serviceId,
-      network: data.network || '',
+      network: String(data.network || '').toUpperCase(),
       prefixs: data.prefixs || '',
       exclude_prefixs: data.excludePrefixs || '',
     });
     if (!created.ok) {
+      const rollbackAfter = nextBalance + quotedPrice;
+      await db.updateUser(session.userId, { balance: rollbackAfter });
+      await db.addUserBalanceHistory({
+        ts: Date.now(),
+        userId: session.userId,
+        delta: quotedPrice,
+        balanceAfter: rollbackAfter,
+        reason: 'sim_rent_refund',
+        ref: orderRef,
+      });
       const msg = String((created.json as { error?: string })?.error || 'Tạo yêu cầu thất bại');
       return NextResponse.json({ error: msg, provider: created.json }, { status: 400 });
     }
     const row = created.json as Record<string, unknown>;
     const rentId = String(row.rent_id || row._id || '');
     const number = String(row.number || '');
-    const basePrice = Number(row.price || 0);
+    const basePrice = Number(row.price || quotedBasePrice || 0);
     const saved = await db.addSimRentOrder({
       userId: session.userId,
       serviceId: data.serviceId,
-      serviceName: String(data.serviceName || ''),
-      network: String(data.network || ''),
+      serviceName: String(service.name || ''),
+      network: String(data.network || '').toUpperCase(),
       prefixs: String(data.prefixs || ''),
       excludePrefixs: String(data.excludePrefixs || ''),
       rentId,
       number,
       status: 'PENDING',
       basePrice,
-      price: applyMarkup(basePrice, markupPercent),
+      price: quotedPrice,
       markupPercent,
+      orderId: orderRef,
       providerRaw: row,
     });
     return NextResponse.json({ ok: true, item: saved });
