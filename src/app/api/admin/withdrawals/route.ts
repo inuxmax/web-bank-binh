@@ -37,6 +37,7 @@ export async function GET(req: Request) {
         ...it,
         username: String((it as { username?: string }).username || u?.username || u?.webLogin || ''),
         isVerified: u?.isVerified === true,
+        isScam: u?.isScam === true,
       };
     }),
   });

@@ -18,6 +18,7 @@ type WithdrawalItem = {
   status?: string;
   createdAt?: number;
   isVerified?: boolean;
+  isScam?: boolean;
 };
 
 type IbftHistoryItem = {
@@ -216,6 +217,7 @@ export default function AdminIbftPage() {
   const selectedKey = String(selectedWithdrawal?.id || selectedWithdrawal?.mongoId || '');
   const pendingCount = withdrawals.length;
   const pendingVerified = withdrawals.filter((x) => Boolean(x.isVerified)).length;
+  const pendingScam = withdrawals.filter((x) => Boolean(x.isScam)).length;
 
   return (
     <div className="space-y-6">
@@ -225,7 +227,7 @@ export default function AdminIbftPage() {
         description="Firm transfer môi trường thật. Nhập trực tiếp thông tin người nhận và chọn kênh nguồn theo cấu hình thật."
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-emerald-200/80 bg-emerald-50/60" padding="sm">
           <p className="text-xs text-emerald-700">Yêu cầu đang chờ</p>
           <p className="text-xl font-semibold text-emerald-800">{pendingCount}</p>
@@ -237,6 +239,10 @@ export default function AdminIbftPage() {
         <Card className="border-sky-200/80 bg-sky-50/60" padding="sm">
           <p className="text-xs text-sky-700">Đang chọn</p>
           <p className="truncate font-mono text-sm font-semibold text-sky-800">{selectedKey || 'Chưa chọn'}</p>
+        </Card>
+        <Card className="border-red-300/90 bg-red-50/70" padding="sm">
+          <p className="text-xs text-red-700">User scam đang chờ</p>
+          <p className="text-xl font-semibold text-red-800">{pendingScam}</p>
         </Card>
       </div>
 
@@ -354,6 +360,8 @@ export default function AdminIbftPage() {
                     className={`relative w-full rounded-2xl border bg-gradient-to-br px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
                       selectedKey === String(w.id || w.mongoId || '')
                         ? 'border-emerald-300 from-emerald-50 via-white to-sky-50 ring-2 ring-emerald-200/70'
+                        : w.isScam
+                          ? 'border-red-300 from-red-50 via-white to-red-50/40 shadow-[0_0_0_1px_rgba(239,68,68,0.18)]'
                         : w.isVerified
                           ? 'border-rose-200 from-rose-50/60 via-white to-rose-50/30 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]'
                           : 'border-sky-100 from-white via-sky-50/40 to-emerald-50/30 hover:border-accent/40'
@@ -361,10 +369,44 @@ export default function AdminIbftPage() {
                   >
                     <span
                       className={`absolute left-0 top-0 h-full w-1.5 rounded-l-2xl ${
-                        w.isVerified ? 'bg-rose-400/80' : 'bg-sky-400/70'
+                        w.isScam ? 'bg-red-500/90' : w.isVerified ? 'bg-rose-400/80' : 'bg-sky-400/70'
                       }`}
                     />
-                    {w.isVerified ? (
+                    {w.isScam ? (
+                      <svg
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 h-full w-full"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                      >
+                        <rect
+                          x="1.2"
+                          y="1.2"
+                          width="97.6"
+                          height="97.6"
+                          rx="14"
+                          ry="14"
+                          fill="none"
+                          stroke="rgb(239 68 68 / 0.5)"
+                          strokeWidth="1.4"
+                        />
+                        <rect
+                          x="1.2"
+                          y="1.2"
+                          width="97.6"
+                          height="97.6"
+                          rx="14"
+                          ry="14"
+                          fill="none"
+                          stroke="rgb(220 38 38 / 0.98)"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeDasharray="24 252"
+                        >
+                          <animate attributeName="stroke-dashoffset" from="0" to="-276" dur="1.6s" repeatCount="indefinite" />
+                        </rect>
+                      </svg>
+                    ) : w.isVerified ? (
                       <svg
                         aria-hidden
                         className="pointer-events-none absolute inset-0 h-full w-full"
@@ -402,6 +444,11 @@ export default function AdminIbftPage() {
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-slate-800">#{String(w.id || '—')}</p>
                       <div className="flex items-center gap-2">
+                        {w.isScam ? (
+                          <span className="rounded-full bg-red-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                            SCAM
+                          </span>
+                        ) : null}
                         {w.isVerified ? (
                           <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
                             User verify

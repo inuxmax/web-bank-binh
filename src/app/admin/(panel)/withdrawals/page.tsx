@@ -157,12 +157,48 @@ export default function AdminWithdrawalsPage() {
           <li
             key={String(w.id || w.mongoId || `row-${start + idx}`)}
             className={`relative rounded-[var(--radius-app-lg)] border bg-surface-1/95 p-5 text-sm text-slate-800 shadow-inner-glow ${
-              w.isVerified === true
+              w.isScam === true
+                ? 'border-rose-400 bg-rose-100/45 shadow-[0_0_0_1px_rgba(244,63,94,0.2)]'
+                : w.isVerified === true
                 ? 'border-rose-200 bg-rose-50/35 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]'
                 : 'border-slate-200/90'
             }`}
           >
-            {w.isVerified === true ? (
+            {w.isScam === true ? (
+              <svg
+                aria-hidden
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                <rect
+                  x="1.2"
+                  y="1.2"
+                  width="97.6"
+                  height="97.6"
+                  rx="14"
+                  ry="14"
+                  fill="none"
+                  stroke="rgb(239 68 68 / 0.5)"
+                  strokeWidth="1.4"
+                />
+                <rect
+                  x="1.2"
+                  y="1.2"
+                  width="97.6"
+                  height="97.6"
+                  rx="14"
+                  ry="14"
+                  fill="none"
+                  stroke="rgb(220 38 38 / 0.98)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray="24 252"
+                >
+                  <animate attributeName="stroke-dashoffset" from="0" to="-276" dur="1.6s" repeatCount="indefinite" />
+                </rect>
+              </svg>
+            ) : w.isVerified === true ? (
               <svg
                 aria-hidden
                 className="pointer-events-none absolute inset-0 h-full w-full"
@@ -200,6 +236,11 @@ export default function AdminWithdrawalsPage() {
             <div className="flex flex-wrap justify-between gap-2">
               <span className="font-mono text-accent">{String(w.id || `WD-${String(w.mongoId || '').slice(-6)}`)}</span>
               <div className="flex items-center gap-2">
+                {w.isScam === true ? (
+                  <span className="rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                    SCAM
+                  </span>
+                ) : null}
                 {w.isVerified === true ? (
                   <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
                     User verify

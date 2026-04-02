@@ -32,6 +32,46 @@ function normalizeVaItems(decoded: Record<string, unknown> | null): Record<strin
   return [];
 }
 
+function pickString(raw: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const v = raw[key];
+    if (v === undefined || v === null) continue;
+    const s = String(v).trim();
+    if (s) return s;
+  }
+  return '';
+}
+
+function buildOwnerMap(rows: Record<string, unknown>[]) {
+  const map = new Map<string, { userId: string; username: string }>();
+  const sorted = rows
+    .slice()
+    .sort((a, b) => (Number(b.createdAt || 0) || 0) - (Number(a.createdAt || 0) || 0));
+  for (const r of sorted) {
+    const vaAccount = String(r.vaAccount || '').trim();
+    if (!vaAccount || map.has(vaAccount)) continue;
+    const userId = pickString(r, ['userId', 'ownerId', 'uid']);
+    const username = pickString(r, ['username', 'webLogin', 'userName', 'ownerUsername']);
+    map.set(vaAccount, { userId, username });
+  }
+  return map;
+}
+
+function enrichOwnerFields(items: Record<string, unknown>[], ownerMap: Map<string, { userId: string; username: string }>) {
+  return items.map((item) => {
+    const vaAccount = pickString(item, ['vaAccount', 'account', 'accountNo']);
+    const localOwner = ownerMap.get(vaAccount);
+    const userId = pickString(item, ['userId', 'ownerId', 'uid']) || localOwner?.userId || '';
+    const username =
+      pickString(item, ['username', 'webLogin', 'userName', 'ownerUsername']) || localOwner?.username || '';
+    return {
+      ...item,
+      userId,
+      username,
+    };
+  });
+}
+
 function fallbackItemsFromDb(rows: Record<string, unknown>[]) {
   const map = new Map<string, Record<string, unknown>>();
   const sorted = rows
@@ -45,6 +85,8 @@ function fallbackItemsFromDb(rows: Record<string, unknown>[]) {
       vaAccount,
       vaName: String(r.vaName || r.name || '').trim(),
       bankCode: String(r.vaBank || '').trim(),
+      userId: pickString(r, ['userId', 'ownerId', 'uid']),
+      username: pickString(r, ['username', 'webLogin', 'userName', 'ownerUsername']),
       remark: String(r.remark || r.transferContent || '').trim(),
       status: String(r.status || '').trim() || '—',
       createdAt: Number(r.createdAt || 0) || 0,
@@ -75,12 +117,13 @@ export async function GET(req: Request) {
   const page = Math.max(1, Number(searchParams.get('page') || 1));
 
   try {
+    const localRows = (await db.loadAll()) as unknown as Record<string, unknown>[];
+    const ownerMap = buildOwnerMap(localRows);
     const response = await listVirtualAccounts({ size, page });
-    let items = normalizeVaItems(response.decoded);
+    let items = enrichOwnerFields(normalizeVaItems(response.decoded), ownerMap);
     let source: 'hpay' | 'db_fallback' = 'hpay';
     if (!items.length) {
-      const localRows = await db.loadAll();
-      items = fallbackItemsFromDb(localRows as unknown as Record<string, unknown>[]);
+      items = fallbackItemsFromDb(localRows);
       source = 'db_fallback';
     }
     return NextResponse.json({

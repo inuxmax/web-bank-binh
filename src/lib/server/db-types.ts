@@ -12,6 +12,8 @@ export type UserRecord = {
   isBanned?: boolean;
   /** User đã được verify thủ công bởi admin */
   isVerified?: boolean;
+  /** User bị đánh dấu scam bởi admin */
+  isScam?: boolean;
   isActive: boolean;
   feePercent: number | null;
   ipnFeeFlat: number | null;

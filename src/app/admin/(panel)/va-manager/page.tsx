@@ -8,6 +8,8 @@ type VaRow = {
   vaAccount: string;
   vaName: string;
   bankCode: string;
+  userId: string;
+  username: string;
   remark: string;
   status: string;
   createdAt: number;
@@ -36,6 +38,8 @@ function normalizeVaRow(raw: Record<string, unknown>): VaRow {
     vaAccount: pickString(raw, ['vaAccount', 'account', 'accountNo']),
     vaName: pickString(raw, ['vaName', 'name', 'accountName']),
     bankCode: pickString(raw, ['bankCode', 'vaBank', 'bankName']),
+    userId: pickString(raw, ['userId', 'ownerId', 'uid']),
+    username: pickString(raw, ['username', 'webLogin', 'userName', 'ownerUsername']),
     remark: pickString(raw, ['remark', 'transferContent']),
     status: pickString(raw, ['status', 'vaStatus']) || '—',
     createdAt: pickNumber(raw, ['createdAt', 'createTime', 'timeCreated']),
@@ -92,7 +96,9 @@ export default function AdminVaManagerPage() {
     const key = q.trim().toLowerCase();
     if (!key) return rows;
     return rows.filter((r) =>
-      `${r.vaAccount} ${r.vaName} ${r.bankCode} ${r.remark} ${r.status}`.toLowerCase().includes(key),
+      `${r.vaAccount} ${r.vaName} ${r.userId} ${r.username} ${r.bankCode} ${r.remark} ${r.status}`
+        .toLowerCase()
+        .includes(key),
     );
   }, [rows, q]);
 
@@ -134,6 +140,7 @@ export default function AdminVaManagerPage() {
       STT: idx + 1,
       'STK VA': r.vaAccount,
       'Tên TK': r.vaName || '',
+      User: r.username || r.userId || '',
       'Ngân hàng': r.bankCode || '',
       'Nội dung': r.remark || '',
       'Trạng thái': r.status || '',
@@ -239,7 +246,7 @@ export default function AdminVaManagerPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               className="w-full rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2 text-sm"
-              placeholder="Tìm VA, tên, ngân hàng..."
+              placeholder="Tìm VA, tên, user, ngân hàng..."
             />
           </div>
           <div className="flex items-center gap-2">
@@ -260,7 +267,7 @@ export default function AdminVaManagerPage() {
         <p className="text-sm text-slate-500">Đang tải danh sách VA từ API...</p>
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1 shadow-inner-glow">
-          <table className="w-full min-w-[1100px] text-left text-sm text-slate-700">
+          <table className="w-full min-w-[1220px] text-left text-sm text-slate-700">
             <thead className="border-b border-slate-200 bg-surface-2/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="p-3 w-[44px]">
@@ -268,6 +275,7 @@ export default function AdminVaManagerPage() {
                 </th>
                 <th className="p-3">STK VA</th>
                 <th className="p-3">Tên TK</th>
+                <th className="p-3">User</th>
                 <th className="p-3">Ngân hàng</th>
                 <th className="p-3">Nội dung</th>
                 <th className="p-3">Trạng thái</th>
@@ -278,7 +286,7 @@ export default function AdminVaManagerPage() {
             <tbody>
               {pageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-slate-500">
+                  <td colSpan={9} className="p-6 text-center text-slate-500">
                     Không có dữ liệu VA.
                   </td>
                 </tr>
@@ -294,6 +302,10 @@ export default function AdminVaManagerPage() {
                     </td>
                     <td className="p-3 font-mono text-xs text-accent">{r.vaAccount}</td>
                     <td className="p-3">{r.vaName || '—'}</td>
+                    <td className="p-3">
+                      <span className="font-medium">{r.username || '—'}</span>
+                      <span className="ml-1 text-xs text-slate-500">{r.userId ? `(${r.userId})` : ''}</span>
+                    </td>
                     <td className="p-3">{r.bankCode || '—'}</td>
                     <td className="p-3">{r.remark || '—'}</td>
                     <td className="p-3">{r.status || '—'}</td>

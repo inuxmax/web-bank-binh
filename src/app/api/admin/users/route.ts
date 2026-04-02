@@ -30,6 +30,7 @@ export async function GET() {
       isActive: u.isActive,
       isBanned: u.isBanned === true,
       isVerified: u.isVerified === true,
+      isScam: u.isScam === true,
       balance: u.balance,
       vaLimit: u.vaLimit,
       createdVA: u.createdVA,
@@ -56,6 +57,7 @@ const patchSchema = z.object({
   isActive: z.boolean().optional(),
   isBanned: z.boolean().optional(),
   isVerified: z.boolean().optional(),
+  isScam: z.boolean().optional(),
   vaLimit: z.number().int().min(0).nullable().optional(),
   feePercent: z.number().min(0).max(100).nullable().optional(),
   ipnFeeFlat: z.number().min(0).nullable().optional(),
@@ -119,6 +121,7 @@ export async function PATCH(req: Request) {
     if (data.isActive !== undefined) userPatch.isActive = data.isActive;
     if (data.isBanned !== undefined) userPatch.isBanned = data.isBanned;
     if (data.isVerified !== undefined) userPatch.isVerified = data.isVerified;
+    if (data.isScam !== undefined) userPatch.isScam = data.isScam;
     if (data.vaLimit !== undefined) userPatch.vaLimit = data.vaLimit;
     if (data.feePercent !== undefined) userPatch.feePercent = data.feePercent;
     if (data.ipnFeeFlat !== undefined) userPatch.ipnFeeFlat = data.ipnFeeFlat;

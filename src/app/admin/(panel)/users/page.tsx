@@ -13,6 +13,7 @@ type U = {
   isActive: boolean;
   isBanned?: boolean;
   isVerified?: boolean;
+  isScam?: boolean;
   balance: number;
   vaLimit: number | null;
   createdVA: number;
@@ -731,12 +732,24 @@ export default function AdminUsersPage() {
               <tr
                 key={u.id}
                 className={`border-b border-slate-100 ${
-                  u.isVerified ? 'bg-sky-100/90 hover:bg-sky-200/80' : 'hover:bg-slate-50/80'
+                  u.isScam
+                    ? 'bg-rose-100/90 hover:bg-rose-200/80'
+                    : u.isVerified
+                      ? 'bg-sky-100/90 hover:bg-sky-200/80'
+                      : 'hover:bg-slate-50/80'
                 }`}
               >
                 <td className="p-3 font-mono text-xs text-accent">
                   <div className="flex max-w-[180px] items-center gap-1.5 truncate" title={u.id}>
                     <span className="truncate">{u.id}</span>
+                    {u.isScam ? (
+                      <span
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white"
+                        title="Đánh dấu scam"
+                      >
+                        !
+                      </span>
+                    ) : null}
                     {u.isVerified ? (
                       <span
                         className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-sky-500 text-[10px] font-bold text-white"
@@ -825,6 +838,17 @@ export default function AdminUsersPage() {
                       }`}
                     >
                       {u.isVerified ? 'Bỏ verify' : 'Verify'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void patch(u.id, { isScam: !u.isScam })}
+                      className={`rounded-lg border px-2 py-1 text-xs font-medium shadow-sm ${
+                        u.isScam
+                          ? 'border-rose-300 bg-rose-100 text-rose-800 hover:bg-rose-200'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {u.isScam ? 'Bỏ scam' : 'Đánh dấu scam'}
                     </button>
                     <button
                       type="button"
