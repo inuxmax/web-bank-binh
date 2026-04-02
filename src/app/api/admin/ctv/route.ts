@@ -54,7 +54,7 @@ export async function GET() {
 
 const patchSchema = z.object({
   id: z.string().min(1),
-  action: z.enum(['approve', 'reject', 'set_rate', 'set_customer_fee']),
+  action: z.enum(['approve', 'reject', 'set_rate', 'set_customer_fee', 'reset_referred', 'delete_ctv']),
   ratePercent: z.number().min(0).max(100).nullable().optional(),
   customerFeePercent: z.number().min(0).max(100).nullable().optional(),
 });
@@ -112,7 +112,7 @@ export async function PATCH(req: Request) {
       await db.updateUser(id, {
         ctvRatePercent: ratePercent ?? null,
       });
-    } else {
+    } else if (action === 'set_customer_fee') {
       await db.updateUser(id, {
         ctvCustomerFeePercent: customerFeePercent ?? null,
       });
@@ -121,6 +121,41 @@ export async function PATCH(req: Request) {
         if (String(x.referredByUserId || '') !== id) continue;
         await db.updateUser(x.id, { feePercent: customerFeePercent ?? null });
       }
+    } else if (action === 'reset_referred') {
+      const users = await db.getAllUsers();
+      let updated = 0;
+      for (const x of users) {
+        if (String(x.referredByUserId || '') !== id) continue;
+        await db.updateUser(x.id, {
+          referredByUserId: '',
+          referredByCode: '',
+          feePercent: null,
+        });
+        updated += 1;
+      }
+      return NextResponse.json({ ok: true, updated });
+    } else {
+      const users = await db.getAllUsers();
+      let updated = 0;
+      for (const x of users) {
+        if (String(x.referredByUserId || '') !== id) continue;
+        await db.updateUser(x.id, {
+          referredByUserId: '',
+          referredByCode: '',
+          feePercent: null,
+        });
+        updated += 1;
+      }
+      await db.updateUser(id, {
+        ctvStatus: 'none',
+        ctvRatePercent: null,
+        ctvCustomerFeePercent: null,
+        ctvAppliedAt: 0,
+        ctvApprovedAt: 0,
+        ctvCommissionTotal: 0,
+        ctvCommissionCount: 0,
+      });
+      return NextResponse.json({ ok: true, updated });
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

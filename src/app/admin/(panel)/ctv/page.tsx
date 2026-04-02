@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PageHeader, useAppPopup } from '@/components/ui';
 
 type Row = {
@@ -34,6 +34,8 @@ export default function AdminCtvPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  const [actionMenu, setActionMenu] = useState<{ userId: string; top: number; left: number } | null>(null);
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
 
   async function load() {
     setLoading(true);
@@ -50,17 +52,62 @@ export default function AdminCtvPage() {
   useEffect(() => {
     setPage(1);
   }, [items.length]);
+  useEffect(() => {
+    setActionMenu(null);
+  }, [page]);
+  useEffect(() => {
+    if (!actionMenu) return;
+    const onPointerDown = (ev: MouseEvent) => {
+      const target = ev.target as HTMLElement | null;
+      if (!target) return;
+      if (actionMenuRef.current?.contains(target)) return;
+      const trigger = target.closest(`[data-ctv-action-trigger="${actionMenu.userId}"]`);
+      if (trigger) return;
+      setActionMenu(null);
+    };
+    const onResizeOrScroll = () => setActionMenu(null);
+    const onEsc = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setActionMenu(null);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('resize', onResizeOrScroll);
+    window.addEventListener('scroll', onResizeOrScroll, true);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('resize', onResizeOrScroll);
+      window.removeEventListener('scroll', onResizeOrScroll, true);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [actionMenu]);
 
-  async function act(id: string, action: 'approve' | 'reject') {
-    const ok = await popup.confirm(
-      action === 'approve' ? `Duyệt CTV ${id}?` : `Từ chối CTV ${id}?`,
-    );
+  async function act(
+    id: string,
+    action: 'approve' | 'reject' | 'reset_referred' | 'delete_ctv',
+  ) {
+    const actionText =
+      action === 'approve'
+        ? `Duyệt CTV ${id}?`
+        : action === 'reject'
+          ? `Từ chối CTV ${id}?`
+          : action === 'reset_referred'
+            ? `Reset "Đã giới thiệu" của ${id}? (xóa toàn bộ user được gán bởi CTV này)`
+            : `Xóa CTV ${id}? (reset trạng thái CTV + xóa toàn bộ user đã giới thiệu)`;
+    const ok = await popup.confirm(actionText);
     if (!ok) return;
-    await fetch('/api/admin/ctv', {
+    const res = await fetch('/api/admin/ctv', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, action }),
     });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await popup.alert(String(d.error || 'Thao tác thất bại'));
+      return;
+    }
+    if (action === 'reset_referred' || action === 'delete_ctv') {
+      await popup.alert(`Đã cập nhật ${Number(d.updated || 0)} user liên quan.`);
+    }
     await load();
   }
 
@@ -214,41 +261,103 @@ export default function AdminCtvPage() {
                           </td>
                           <td className="p-3 text-xs">{fmtTs(r.ctvAppliedAt)}</td>
                           <td className="p-3 text-xs">{fmtTs(r.ctvApprovedAt)}</td>
-                          <td className="p-3">
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => void setUserRate(r)}
-                                className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                          <td className="relative p-3">
+                            <button
+                              type="button"
+                              data-ctv-action-trigger={r.id}
+                              onClick={(e) => {
+                                if (actionMenu?.userId === r.id) {
+                                  setActionMenu(null);
+                                  return;
+                                }
+                                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                const menuWidth = 240;
+                                const menuHeight = 246;
+                                const gap = 8;
+                                const left = Math.max(
+                                  8,
+                                  Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth),
+                                );
+                                const placeUp = rect.bottom + gap + menuHeight > window.innerHeight;
+                                const top = placeUp
+                                  ? Math.max(8, rect.top - menuHeight - gap)
+                                  : Math.max(8, rect.bottom + gap);
+                                setActionMenu({ userId: r.id, top, left });
+                              }}
+                              className="rounded border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                              Thao tác
+                            </button>
+                            {actionMenu?.userId === r.id ? (
+                              <div
+                                ref={actionMenuRef}
+                                style={{ top: actionMenu.top, left: actionMenu.left }}
+                                className="fixed z-[90] w-60 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
                               >
-                                Set %
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => void setCustomerFee(r)}
-                                className="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700"
-                              >
-                                Set % khách
-                              </button>
-                              {r.ctvStatus !== 'approved' ? (
-                                <button
-                                  type="button"
-                                  onClick={() => void act(r.id, 'approve')}
-                                  className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
-                                >
-                                  Duyệt
-                                </button>
-                              ) : null}
-                              {r.ctvStatus !== 'rejected' ? (
-                                <button
-                                  type="button"
-                                  onClick={() => void act(r.id, 'reject')}
-                                  className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700"
-                                >
-                                  Từ chối
-                                </button>
-                              ) : null}
-                            </div>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActionMenu(null);
+                                      void setUserRate(r);
+                                    }}
+                                    className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                  >
+                                    Set %
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActionMenu(null);
+                                      void setCustomerFee(r);
+                                    }}
+                                    className="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700"
+                                  >
+                                    Set % khách
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActionMenu(null);
+                                      void act(r.id, 'approve');
+                                    }}
+                                    className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
+                                  >
+                                    Duyệt
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActionMenu(null);
+                                      void act(r.id, 'reject');
+                                    }}
+                                    className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700"
+                                  >
+                                    Từ chối
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActionMenu(null);
+                                      void act(r.id, 'reset_referred');
+                                    }}
+                                    className="col-span-2 rounded border border-violet-300 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700"
+                                  >
+                                    Reset Đã giới thiệu
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActionMenu(null);
+                                      void act(r.id, 'delete_ctv');
+                                    }}
+                                    className="col-span-2 rounded border border-rose-400 bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-800"
+                                  >
+                                    Xóa CTV
+                                  </button>
+                                </div>
+                              </div>
+                            ) : null}
                           </td>
                         </tr>
                       ))}
