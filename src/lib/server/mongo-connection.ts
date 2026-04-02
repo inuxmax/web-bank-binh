@@ -1,5 +1,3 @@
-import 'server-only';
-
 import mongoose from 'mongoose';
 
 function normalizeMongoUri(raw: string | undefined): string {

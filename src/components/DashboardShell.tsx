@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardNav } from './DashboardNav';
 
@@ -22,6 +23,16 @@ export function DashboardShell({
   };
 }) {
   const router = useRouter();
+
+  useEffect(() => {
+    // Branding note in browser devtools console.
+    // Keep this concise to avoid noisy logs.
+    // eslint-disable-next-line no-console
+    console.log(
+      '%cDev: @blackpink03 ( Telegram )\nNhận Code web, Bot theo yêu cầu',
+      'color:#16a34a;font-weight:700;font-size:13px;',
+    );
+  }, []);
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });

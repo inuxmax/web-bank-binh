@@ -31,6 +31,9 @@ const patchSchema = z.object({
   autoApproveNewUsers: z.boolean(),
   simRentApiToken: z.string(),
   simRentMarkupPercent: z.number().min(0).max(1000),
+  mongoBackupAutoEnabled: z.boolean(),
+  mongoBackupIntervalMinutes: z.number().int().min(10).max(10080),
+  mongoBackupKeepFiles: z.number().int().min(1).max(500),
 });
 
 export async function PATCH(req: Request) {
@@ -57,6 +60,9 @@ export async function PATCH(req: Request) {
       autoApproveNewUsers: data.autoApproveNewUsers,
       simRentApiToken: data.simRentApiToken,
       simRentMarkupPercent: data.simRentMarkupPercent,
+      mongoBackupAutoEnabled: data.mongoBackupAutoEnabled,
+      mongoBackupIntervalMinutes: data.mongoBackupIntervalMinutes,
+      mongoBackupKeepFiles: data.mongoBackupKeepFiles,
     });
     return NextResponse.json({ ok: true, config });
   } catch (e) {

@@ -78,6 +78,10 @@ const AppConfigSchema = new Schema(
     simRentApiToken: { type: String, default: '' },
     simRentMarkupPercent: { type: Number, default: 0 },
     statsResetAt: { type: Number, default: 0 },
+    mongoBackupAutoEnabled: { type: Boolean, default: true },
+    mongoBackupIntervalMinutes: { type: Number, default: 360 },
+    mongoBackupKeepFiles: { type: Number, default: 20 },
+    mongoBackupLastRunAt: { type: Number, default: 0 },
   },
   { collection: 'app_config' },
 );
