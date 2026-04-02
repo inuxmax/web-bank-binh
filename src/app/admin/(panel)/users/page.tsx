@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PageHeader, useAppPopup } from '@/components/ui';
 
 type U = {
@@ -127,7 +127,8 @@ export default function AdminUsersPage() {
   const [feeSaving, setFeeSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<'all' | 'active' | 'inactive' | 'banned'>('all');
-  const [actionMenuUserId, setActionMenuUserId] = useState<string | null>(null);
+  const [actionMenu, setActionMenu] = useState<{ userId: string; top: number; left: number } | null>(null);
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
 
   async function load() {
     const res = await fetch('/api/admin/users');
@@ -151,8 +152,34 @@ export default function AdminUsersPage() {
     setPage(1);
   }, [quickFilter]);
   useEffect(() => {
-    setActionMenuUserId(null);
+    setActionMenu(null);
   }, [quickFilter, search, page, pageSize]);
+
+  useEffect(() => {
+    if (!actionMenu) return;
+    const onPointerDown = (ev: MouseEvent) => {
+      const target = ev.target as HTMLElement | null;
+      if (!target) return;
+      if (actionMenuRef.current?.contains(target)) return;
+      const trigger = target.closest(`[data-action-trigger="${actionMenu.userId}"]`);
+      if (trigger) return;
+      setActionMenu(null);
+    };
+    const onResizeOrScroll = () => setActionMenu(null);
+    const onEsc = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setActionMenu(null);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('resize', onResizeOrScroll);
+    window.addEventListener('scroll', onResizeOrScroll, true);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('resize', onResizeOrScroll);
+      window.removeEventListener('scroll', onResizeOrScroll, true);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [actionMenu]);
 
   useEffect(() => {
     if (!historyUser) {
@@ -329,6 +356,7 @@ export default function AdminUsersPage() {
       u.id,
       u.webLogin || '',
       u.username || '',
+      u.telegramUsername || '',
       u.registerIp || '',
       u.lastLoginIp || '',
     ]
@@ -719,7 +747,7 @@ export default function AdminUsersPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm user: id, login, username, IP..."
+            placeholder="Tìm user: id, login, username, @telegram, IP..."
             className="w-full rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm"
           />
         </div>
@@ -830,18 +858,41 @@ export default function AdminUsersPage() {
                 <td className="relative p-3">
                   <button
                     type="button"
-                    onClick={() => setActionMenuUserId((prev) => (prev === u.id ? null : u.id))}
+                    data-action-trigger={u.id}
+                    onClick={(e) => {
+                      if (actionMenu?.userId === u.id) {
+                        setActionMenu(null);
+                        return;
+                      }
+                      const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                      const menuWidth = 232;
+                      const menuHeight = 252;
+                      const gap = 8;
+                      const left = Math.max(
+                        8,
+                        Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth),
+                      );
+                      const placeUp = rect.bottom + gap + menuHeight > window.innerHeight;
+                      const top = placeUp
+                        ? Math.max(8, rect.top - menuHeight - gap)
+                        : Math.max(8, rect.bottom + gap);
+                      setActionMenu({ userId: u.id, top, left });
+                    }}
                     className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
                   >
                     Thao tác
                   </button>
-                  {actionMenuUserId === u.id ? (
-                    <div className="absolute right-3 top-12 z-20 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                  {actionMenu?.userId === u.id ? (
+                    <div
+                      ref={actionMenuRef}
+                      style={{ top: actionMenu.top, left: actionMenu.left }}
+                      className="fixed z-[90] w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                    >
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
                           type="button"
                           onClick={() => {
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             void patch(u.id, { isActive: !u.isActive });
                           }}
                           className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
@@ -862,7 +913,7 @@ export default function AdminUsersPage() {
                               const ok = await popup.confirm(`Khóa (ban) user ${u.id}? Họ không đăng nhập được.`);
                               if (!ok) return;
                             }
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             void patch(u.id, { isBanned: next });
                           }}
                           className="rounded-lg border border-rose-200/80 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
@@ -872,7 +923,7 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             void promptAddBalance(u);
                           }}
                           className="rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/15"
@@ -882,7 +933,7 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             void promptSubtractBalance(u);
                           }}
                           className="rounded-lg border border-amber-300/80 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
@@ -892,7 +943,7 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             void patch(u.id, { isVerified: !u.isVerified });
                           }}
                           className={`rounded-lg border px-2 py-1 text-xs font-medium ${
@@ -906,7 +957,7 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             void patch(u.id, { isScam: !u.isScam });
                           }}
                           className={`rounded-lg border px-2 py-1 text-xs font-medium ${
@@ -920,7 +971,7 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             openFeeModal(u);
                           }}
                           className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
@@ -930,7 +981,7 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             setInfoUser(u);
                           }}
                           className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
@@ -940,7 +991,7 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             setHistoryUser(u);
                           }}
                           className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
@@ -956,7 +1007,7 @@ export default function AdminUsersPage() {
                               defaultValue: String(u.vaLimit ?? ''),
                             });
                             if (v === null) return;
-                            setActionMenuUserId(null);
+                            setActionMenu(null);
                             void patch(u.id, { vaLimit: v === '' ? null : Number(v) });
                           }}
                           className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
