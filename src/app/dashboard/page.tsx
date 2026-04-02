@@ -4,12 +4,14 @@ import * as db from '@/lib/server/db';
 import { formatDateTimeVN } from '@/lib/server/va-helpers';
 import { PageHeader, ArrowLink, Card, CardHeader, CardTitle, StatTile } from '@/components/ui';
 import { TelegramConnectCard } from '@/components/TelegramConnectCard';
+import { DashboardAnnouncementPopup } from '@/components/DashboardAnnouncementPopup';
 
 export default async function DashboardPage() {
   const session = await getSession();
   const isAdmin = !!session.isAdmin;
   let balance = 0;
   const userId = session.userId || '';
+  const appConfig = await db.getConfig();
 
   let vaTotal = 0;
   let vaPaid = 0;
@@ -61,6 +63,16 @@ export default async function DashboardPage() {
 
       {!isAdmin && (
         <>
+          <DashboardAnnouncementPopup
+            enabled={appConfig.dashboardPopupEnabled === true}
+            title={String(appConfig.dashboardPopupTitle || '')}
+            body={String(appConfig.dashboardPopupBody || '')}
+            primaryLabel={String(appConfig.dashboardPopupPrimaryLabel || '')}
+            primaryUrl={String(appConfig.dashboardPopupPrimaryUrl || '')}
+            secondaryLabel={String(appConfig.dashboardPopupSecondaryLabel || '')}
+            secondaryUrl={String(appConfig.dashboardPopupSecondaryUrl || '')}
+            updatedAt={Number(appConfig.dashboardPopupUpdatedAt || 0)}
+          />
           <Card
             className="mb-6 border-emerald-300/80 bg-gradient-to-r from-emerald-50 via-white to-sky-50 shadow-[0_18px_38px_-20px_rgba(16,185,129,0.85)]"
             padding="lg"

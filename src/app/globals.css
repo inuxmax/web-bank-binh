@@ -151,7 +151,7 @@ html.mouse-glow-enabled [contenteditable='true'] {
   left: var(--mouse-x, 50%);
   top: var(--mouse-y, 50%);
   pointer-events: none;
-  z-index: 9999;
+  z-index: 10050;
   transform: translate(-50%, -50%);
   opacity: 0;
   transition: opacity 160ms ease;
@@ -216,7 +216,7 @@ html.theme-dark .mouse-cursor-dot {
   box-shadow: 0 0 16px rgba(45, 212, 191, 0.72);
 }
 
-@media (hover: none), (pointer: coarse), (max-width: 768px) {
+@media (hover: none), (pointer: coarse) {
   .mouse-glow-overlay {
     display: none;
   }

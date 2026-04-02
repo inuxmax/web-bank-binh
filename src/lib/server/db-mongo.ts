@@ -269,6 +269,14 @@ export async function getConfig(): Promise<Record<string, unknown>> {
       mongoBackupIntervalMinutes: 360,
       mongoBackupKeepFiles: 20,
       mongoBackupLastRunAt: 0,
+      dashboardPopupEnabled: false,
+      dashboardPopupTitle: '',
+      dashboardPopupBody: '',
+      dashboardPopupPrimaryLabel: '',
+      dashboardPopupPrimaryUrl: '',
+      dashboardPopupSecondaryLabel: '',
+      dashboardPopupSecondaryUrl: '',
+      dashboardPopupUpdatedAt: 0,
     });
     return {
       globalFeePercent: 0,
@@ -285,6 +293,14 @@ export async function getConfig(): Promise<Record<string, unknown>> {
       mongoBackupIntervalMinutes: 360,
       mongoBackupKeepFiles: 20,
       mongoBackupLastRunAt: 0,
+      dashboardPopupEnabled: false,
+      dashboardPopupTitle: '',
+      dashboardPopupBody: '',
+      dashboardPopupPrimaryLabel: '',
+      dashboardPopupPrimaryUrl: '',
+      dashboardPopupSecondaryLabel: '',
+      dashboardPopupSecondaryUrl: '',
+      dashboardPopupUpdatedAt: 0,
     };
   }
   const { _id, __v, ...rest } = doc as Record<string, unknown>;
@@ -303,6 +319,14 @@ export async function getConfig(): Promise<Record<string, unknown>> {
     mongoBackupIntervalMinutes: 360,
     mongoBackupKeepFiles: 20,
     mongoBackupLastRunAt: 0,
+    dashboardPopupEnabled: false,
+    dashboardPopupTitle: '',
+    dashboardPopupBody: '',
+    dashboardPopupPrimaryLabel: '',
+    dashboardPopupPrimaryUrl: '',
+    dashboardPopupSecondaryLabel: '',
+    dashboardPopupSecondaryUrl: '',
+    dashboardPopupUpdatedAt: 0,
   };
   return { ...defaults, ...rest };
 }
