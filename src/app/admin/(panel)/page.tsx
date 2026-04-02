@@ -36,6 +36,7 @@ export default async function AdminHomePage() {
     { href: '/admin/ibft/history', perm: 'ibft_history', t: 'Lịch sử chi hộ', d: 'Xem log chi hộ gần đây' },
     { href: '/admin/settings', perm: 'settings', t: 'Cấu hình', d: 'Phí chung, % hoa hồng CTV, giới hạn VA toàn hệ thống' },
     { href: '/admin/permissions', perm: 'permissions', t: 'Phân quyền', d: 'Cấp quyền admin theo module' },
+    { href: '/admin/va-manager', perm: 'va_manage', t: 'Quản lý VA', d: 'Lấy danh sách VA từ API và xóa theo chọn lựa' },
   ];
   const visibleCards = cards.filter((c) => permissions.includes(c.perm));
   const syncStatus = getVaSyncStatus();

@@ -30,6 +30,7 @@ const adminLinks: { href: string; label: string; perm: string }[] = [
   { href: '/admin/settings', label: 'Cấu hình', perm: 'settings' },
   { href: '/admin/permissions', label: 'Phân quyền', perm: 'permissions' },
   { href: '/admin/shop-bank', label: 'Shop bank', perm: 'shop_bank' },
+  { href: '/admin/va-manager', label: 'Quản lý VA', perm: 'va_manage' },
 ];
 
 const ONLY_TAODEOVAO_LINKS: { href: string; label: string; perm: string }[] = [

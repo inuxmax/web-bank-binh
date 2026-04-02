@@ -16,6 +16,7 @@ export const ADMIN_PERMISSIONS = [
   'settings',
   'permissions',
   'shop_bank',
+  'va_manage',
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -33,6 +34,7 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, string> = {
   settings: 'Cấu hình',
   permissions: 'Phân quyền admin',
   shop_bank: 'Shop bank',
+  va_manage: 'Quản lý VA',
 };
 
 const PERM_SET = new Set<string>(ADMIN_PERMISSIONS);

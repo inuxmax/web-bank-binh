@@ -26,7 +26,7 @@ const PRESETS: { id: string; label: string; permissions: string[] }[] = [
   {
     id: 'finance',
     label: 'Tài chính',
-    permissions: ['admin_home', 'va_bulk', 'balance', 'ibft', 'ibft_history'],
+    permissions: ['admin_home', 'va_bulk', 'balance', 'ibft', 'ibft_history', 'va_manage'],
   },
   {
     id: 'manager',
@@ -43,6 +43,7 @@ const PRESETS: { id: string; label: string; permissions: string[] }[] = [
       'ibft_history',
       'settings',
       'shop_bank',
+      'va_manage',
     ],
   },
 ];
