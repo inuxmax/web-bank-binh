@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/get-session';
 import { getSessionAdminPermissions, hasAdminPermission } from '@/lib/server/admin-permissions';
-import { listVirtualAccounts, revokeVirtualAccount } from '@/lib/server/hpay';
+import { getBankOverrides, listVirtualAccounts, revokeVirtualAccount } from '@/lib/server/hpay';
 import * as db from '@/lib/server/db';
 
 export const runtime = 'nodejs';
@@ -55,6 +55,15 @@ function fallbackItemsFromDb(rows: Record<string, unknown>[]) {
 
 const deleteSchema = z.object({
   vaAccounts: z.array(z.string().min(1)).min(1).max(500),
+  vaItems: z
+    .array(
+      z.object({
+        vaAccount: z.string().min(1),
+        bankCode: z.string().optional(),
+      }),
+    )
+    .max(500)
+    .optional(),
 });
 
 export async function GET(req: Request) {
@@ -95,16 +104,59 @@ export async function DELETE(req: Request) {
     const body = await req.json();
     const data = deleteSchema.parse(body);
     const uniqAccounts = [...new Set(data.vaAccounts.map((x) => String(x || '').trim()).filter(Boolean))];
+    const hintMap = new Map<string, string>();
+    for (const item of data.vaItems || []) {
+      hintMap.set(String(item.vaAccount || '').trim(), String(item.bankCode || '').trim().toUpperCase());
+    }
+    if (hintMap.size < uniqAccounts.length) {
+      const allRows = await db.loadAll();
+      for (const row of allRows as unknown as Record<string, unknown>[]) {
+        const acc = String(row.vaAccount || '').trim();
+        if (!acc || hintMap.has(acc)) continue;
+        const bankCode = String(row.vaBank || '').trim().toUpperCase();
+        if (bankCode) hintMap.set(acc, bankCode);
+      }
+    }
 
     const results: { vaAccount: string; ok: boolean; errorCode?: string; errorMessage?: string }[] = [];
     const removedAccounts = new Set<string>();
     for (const vaAccount of uniqAccounts) {
-      // eslint-disable-next-line no-await-in-loop
-      const res = await revokeVirtualAccount({ vaAccount });
-      const errorCode = String(res.raw?.errorCode || res.decoded?.errorCode || '').trim();
-      const errorMessage = String(res.raw?.errorMessage || res.decoded?.errorMessage || '').trim();
-      const invalidOrMissing = /invalid|non-existing|not exist|không tồn tại/i.test(errorMessage);
-      const ok = errorCode === '00' || /success|thành công/i.test(errorMessage) || invalidOrMissing;
+      const hint = String(hintMap.get(vaAccount) || '').trim().toUpperCase();
+      const attemptKeys = [hint, '', 'MSB', 'KLB'].filter(Boolean);
+      if (!attemptKeys.includes('')) attemptKeys.push('');
+      const uniqAttemptKeys = [...new Set(attemptKeys)];
+      let errorCode = '';
+      let errorMessage = '';
+      let ok = false;
+      let allInvalid = true;
+
+      for (const key of uniqAttemptKeys) {
+        const ov = key ? getBankOverrides(key) : {};
+        // eslint-disable-next-line no-await-in-loop
+        const res = await revokeVirtualAccount({
+          vaAccount,
+          merchantIdOverride: ov.midOverride,
+          passcodeOverride: ov.passOverride,
+          clientIdOverride: ov.clientIdOverride,
+          clientSecretOverride: ov.clientSecretOverride,
+          xApiMidOverride: ov.xApiMidOverride,
+        });
+        errorCode = String(res.raw?.errorCode || res.decoded?.errorCode || '').trim();
+        errorMessage = String(res.raw?.errorMessage || res.decoded?.errorMessage || '').trim();
+        const success = errorCode === '00' || /success|thành công/i.test(errorMessage);
+        const invalidOrMissing = /invalid|non-existing|not exist|không tồn tại/i.test(errorMessage);
+        if (!invalidOrMissing) allInvalid = false;
+        if (success) {
+          ok = true;
+          break;
+        }
+      }
+
+      if (!ok && allInvalid) {
+        // VA is not found across all configured merchant channels.
+        ok = true;
+        errorMessage = errorMessage || 'VA không tồn tại trên các kênh cấu hình';
+      }
       if (ok) removedAccounts.add(vaAccount);
       results.push({
         vaAccount,

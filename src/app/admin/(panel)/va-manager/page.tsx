@@ -155,10 +155,13 @@ export default function AdminVaManagerPage() {
     const ok = await popup.confirm(`Xóa ${targets.length} VA đã chọn?`);
     if (!ok) return;
     setDeleting(true);
+    const targetItems = rows
+      .filter((r) => targets.includes(r.vaAccount))
+      .map((r) => ({ vaAccount: r.vaAccount, bankCode: r.bankCode || '' }));
     const res = await fetch('/api/admin/va-manager', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vaAccounts: targets }),
+      body: JSON.stringify({ vaAccounts: targets, vaItems: targetItems }),
     });
     const d = await res.json().catch(() => ({}));
     setDeleting(false);
@@ -174,10 +177,14 @@ export default function AdminVaManagerPage() {
     const ok = await popup.confirm(`Xóa VA ${vaAccount}?`);
     if (!ok) return;
     setDeleting(true);
+    const row = rows.find((x) => x.vaAccount === vaAccount);
     const res = await fetch('/api/admin/va-manager', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vaAccounts: [vaAccount] }),
+      body: JSON.stringify({
+        vaAccounts: [vaAccount],
+        vaItems: [{ vaAccount, bankCode: row?.bankCode || '' }],
+      }),
     });
     const d = await res.json().catch(() => ({}));
     setDeleting(false);
