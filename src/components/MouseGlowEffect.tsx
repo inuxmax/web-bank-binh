@@ -17,16 +17,25 @@ export function MouseGlowEffect() {
         root.style.setProperty('--mouse-y', `${e.clientY}px`);
       });
     };
+    const onDown = () => root.classList.add('mouse-pressed');
+    const onUp = () => root.classList.remove('mouse-pressed');
 
     root.classList.add('mouse-glow-enabled');
     window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('mousedown', onDown, { passive: true });
+    window.addEventListener('mouseup', onUp, { passive: true });
+    window.addEventListener('blur', onUp);
 
     return () => {
       if (raf) cancelAnimationFrame(raf);
       root.classList.remove('mouse-glow-enabled');
+      root.classList.remove('mouse-pressed');
       root.style.removeProperty('--mouse-x');
       root.style.removeProperty('--mouse-y');
       window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('blur', onUp);
     };
   }, []);
 
