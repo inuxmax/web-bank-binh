@@ -97,18 +97,27 @@ export async function DELETE(req: Request) {
     const uniqAccounts = [...new Set(data.vaAccounts.map((x) => String(x || '').trim()).filter(Boolean))];
 
     const results: { vaAccount: string; ok: boolean; errorCode?: string; errorMessage?: string }[] = [];
+    const removedAccounts = new Set<string>();
     for (const vaAccount of uniqAccounts) {
       // eslint-disable-next-line no-await-in-loop
       const res = await revokeVirtualAccount({ vaAccount });
       const errorCode = String(res.raw?.errorCode || res.decoded?.errorCode || '').trim();
       const errorMessage = String(res.raw?.errorMessage || res.decoded?.errorMessage || '').trim();
-      const ok = errorCode === '00' || /success|thành công/i.test(errorMessage);
+      const invalidOrMissing = /invalid|non-existing|not exist|không tồn tại/i.test(errorMessage);
+      const ok = errorCode === '00' || /success|thành công/i.test(errorMessage) || invalidOrMissing;
+      if (ok) removedAccounts.add(vaAccount);
       results.push({
         vaAccount,
         ok,
         errorCode: errorCode || undefined,
         errorMessage: errorMessage || undefined,
       });
+    }
+
+    if (removedAccounts.size > 0) {
+      const all = await db.loadAll();
+      const next = all.filter((r) => !removedAccounts.has(String((r as { vaAccount?: string }).vaAccount || '').trim()));
+      await db.saveAll(next);
     }
 
     const success = results.filter((x) => x.ok).length;
