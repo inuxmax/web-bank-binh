@@ -127,6 +127,7 @@ export default function AdminUsersPage() {
   const [feeSaving, setFeeSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<'all' | 'active' | 'inactive' | 'banned'>('all');
+  const [actionMenuUserId, setActionMenuUserId] = useState<string | null>(null);
 
   async function load() {
     const res = await fetch('/api/admin/users');
@@ -149,6 +150,9 @@ export default function AdminUsersPage() {
   useEffect(() => {
     setPage(1);
   }, [quickFilter]);
+  useEffect(() => {
+    setActionMenuUserId(null);
+  }, [quickFilter, search, page, pageSize]);
 
   useEffect(() => {
     if (!historyUser) {
@@ -265,6 +269,39 @@ export default function AdminUsersPage() {
     if (note === null) return;
     void patch(u.id, {
       addBalance: Math.floor(n),
+      balanceNote: note.trim() || undefined,
+    });
+  }
+
+  async function promptSubtractBalance(u: U) {
+    const amtStr = await popup.prompt({
+      title: 'Trừ tiền',
+      message: 'Số tiền trừ (VNĐ, chỉ nhập số)',
+      defaultValue: '100000',
+    });
+    if (amtStr === null) return;
+    const n = Number(String(amtStr).replace(/\D/g, ''));
+    if (!Number.isFinite(n) || n <= 0) {
+      await popup.alert('Số tiền không hợp lệ');
+      return;
+    }
+    if (n > 1_000_000_000) {
+      await popup.alert('Vượt giới hạn 1.000.000.000 / lần');
+      return;
+    }
+    const currentBalance = Number(u.balance || 0);
+    if (n > currentBalance) {
+      await popup.alert('Số dư user hiện tại không đủ để trừ.');
+      return;
+    }
+    const note = await popup.prompt({
+      title: 'Ghi chú',
+      message: 'Ghi chú hiển thị trong lịch sử số dư (tùy chọn)',
+      defaultValue: 'Admin trừ tiền',
+    });
+    if (note === null) return;
+    void patch(u.id, {
+      subtractBalance: Math.floor(n),
       balanceNote: note.trim() || undefined,
     });
   }
@@ -790,103 +827,145 @@ export default function AdminUsersPage() {
                   <div className="max-w-[240px] break-all font-mono leading-4">{u.lastLoginIp || '—'}</div>
                   <div className="mt-1 whitespace-nowrap text-slate-500">{fmtTs(Number(u.lastLoginAt || 0))}</div>
                 </td>
-                <td className="p-3">
-                  <div className="flex min-w-max flex-nowrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => patch(u.id, { isActive: !u.isActive })}
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
-                    >
-                      {u.isActive ? 'Tắt' : 'Bật'}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={u.id === 'admin'}
-                      title={u.id === 'admin' ? 'Không áp dụng cho tài khoản admin hệ thống' : undefined}
-                      onClick={async () => {
-                        if (u.id === 'admin') return;
-                        const next = !u.isBanned;
-                        if (!next) {
-                          const ok = await popup.confirm(`Mở khóa user ${u.id}?`);
-                          if (!ok) return;
-                        } else {
-                          const ok = await popup.confirm(
-                            `Khóa (ban) user ${u.id}? Họ không đăng nhập được.`,
-                          );
-                          if (!ok) return;
-                        }
-                        void patch(u.id, { isBanned: next });
-                      }}
-                      className="rounded-lg border border-rose-200/80 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-800 shadow-sm hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {u.isBanned ? 'Mở khóa' : 'Khóa'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void promptAddBalance(u)}
-                      className="rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/15"
-                    >
-                      Cộng tiền
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void patch(u.id, { isVerified: !u.isVerified })}
-                      className={`rounded-lg border px-2 py-1 text-xs font-medium shadow-sm ${
-                        u.isVerified
-                          ? 'border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100'
-                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      {u.isVerified ? 'Bỏ verify' : 'Verify'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void patch(u.id, { isScam: !u.isScam })}
-                      className={`rounded-lg border px-2 py-1 text-xs font-medium shadow-sm ${
-                        u.isScam
-                          ? 'border-rose-300 bg-rose-100 text-rose-800 hover:bg-rose-200'
-                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      {u.isScam ? 'Bỏ scam' : 'Đánh dấu scam'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openFeeModal(u)}
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
-                    >
-                      Set phí
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setInfoUser(u)}
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
-                    >
-                      Thông tin
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHistoryUser(u)}
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
-                    >
-                      Lịch sử
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const v = await popup.prompt({
-                          title: 'Giới hạn VA',
-                          message: 'Giới hạn VA (số, để trống = không giới hạn)',
-                          defaultValue: String(u.vaLimit ?? ''),
-                        });
-                        if (v === null) return;
-                        patch(u.id, { vaLimit: v === '' ? null : Number(v) });
-                      }}
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
-                    >
-                      Limit
-                    </button>
-                  </div>
+                <td className="relative p-3">
+                  <button
+                    type="button"
+                    onClick={() => setActionMenuUserId((prev) => (prev === u.id ? null : u.id))}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                  >
+                    Thao tác
+                  </button>
+                  {actionMenuUserId === u.id ? (
+                    <div className="absolute right-3 top-12 z-20 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActionMenuUserId(null);
+                            void patch(u.id, { isActive: !u.isActive });
+                          }}
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          {u.isActive ? 'Tắt' : 'Bật'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={u.id === 'admin'}
+                          title={u.id === 'admin' ? 'Không áp dụng cho tài khoản admin hệ thống' : undefined}
+                          onClick={async () => {
+                            if (u.id === 'admin') return;
+                            const next = !u.isBanned;
+                            if (!next) {
+                              const ok = await popup.confirm(`Mở khóa user ${u.id}?`);
+                              if (!ok) return;
+                            } else {
+                              const ok = await popup.confirm(`Khóa (ban) user ${u.id}? Họ không đăng nhập được.`);
+                              if (!ok) return;
+                            }
+                            setActionMenuUserId(null);
+                            void patch(u.id, { isBanned: next });
+                          }}
+                          className="rounded-lg border border-rose-200/80 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {u.isBanned ? 'Mở khóa' : 'Khóa'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActionMenuUserId(null);
+                            void promptAddBalance(u);
+                          }}
+                          className="rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/15"
+                        >
+                          Cộng tiền
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActionMenuUserId(null);
+                            void promptSubtractBalance(u);
+                          }}
+                          className="rounded-lg border border-amber-300/80 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                        >
+                          Trừ tiền
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActionMenuUserId(null);
+                            void patch(u.id, { isVerified: !u.isVerified });
+                          }}
+                          className={`rounded-lg border px-2 py-1 text-xs font-medium ${
+                            u.isVerified
+                              ? 'border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {u.isVerified ? 'Bỏ verify' : 'Verify'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActionMenuUserId(null);
+                            void patch(u.id, { isScam: !u.isScam });
+                          }}
+                          className={`rounded-lg border px-2 py-1 text-xs font-medium ${
+                            u.isScam
+                              ? 'border-rose-300 bg-rose-100 text-rose-800 hover:bg-rose-200'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {u.isScam ? 'Bỏ scam' : 'Đánh dấu scam'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActionMenuUserId(null);
+                            openFeeModal(u);
+                          }}
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          Set phí
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActionMenuUserId(null);
+                            setInfoUser(u);
+                          }}
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          Thông tin
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActionMenuUserId(null);
+                            setHistoryUser(u);
+                          }}
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          Lịch sử
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const v = await popup.prompt({
+                              title: 'Giới hạn VA',
+                              message: 'Giới hạn VA (số, để trống = không giới hạn)',
+                              defaultValue: String(u.vaLimit ?? ''),
+                            });
+                            if (v === null) return;
+                            setActionMenuUserId(null);
+                            void patch(u.id, { vaLimit: v === '' ? null : Number(v) });
+                          }}
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          Limit
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </td>
               </tr>
             ))}

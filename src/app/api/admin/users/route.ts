@@ -64,6 +64,8 @@ const patchSchema = z.object({
   withdrawFeeFlat: z.number().min(0).nullable().optional(),
   /** Cộng tiền nội bộ cho user (admin); ghi vào lịch sử số dư */
   addBalance: z.number().int().positive().max(1_000_000_000).optional(),
+  /** Trừ tiền nội bộ cho user (admin); ghi vào lịch sử số dư */
+  subtractBalance: z.number().int().positive().max(1_000_000_000).optional(),
   balanceNote: z.string().max(200).optional().nullable(),
 });
 
@@ -82,6 +84,10 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json();
     const data = patchSchema.parse(body);
+
+    if (data.addBalance !== undefined && data.subtractBalance !== undefined) {
+      return NextResponse.json({ error: 'Chỉ được cộng hoặc trừ trong một lần thao tác' }, { status: 400 });
+    }
 
     if (data.activeAll === true) {
       const list = await db.getAllUsers();
@@ -113,6 +119,30 @@ export async function PATCH(req: Request) {
         delta: add,
         balanceAfter: next,
         reason: (data.balanceNote && String(data.balanceNote).trim()) || 'Admin cộng tiền',
+        ref: `admin:${session.userId}`,
+      });
+    }
+
+    if (data.subtractBalance !== undefined) {
+      if (!data.id) {
+        return NextResponse.json({ error: 'Cần id user khi trừ tiền' }, { status: 400 });
+      }
+      const u = await db.findUser(data.id);
+      if (!u) {
+        return NextResponse.json({ error: 'Không tìm thấy user' }, { status: 404 });
+      }
+      const prev = Number(u.balance) || 0;
+      const sub = data.subtractBalance;
+      if (sub > prev) {
+        return NextResponse.json({ error: 'Số dư user không đủ để trừ số tiền này' }, { status: 400 });
+      }
+      const next = prev - sub;
+      await db.updateUser(data.id, { balance: next });
+      await db.addUserBalanceHistory({
+        userId: String(data.id),
+        delta: -sub,
+        balanceAfter: next,
+        reason: (data.balanceNote && String(data.balanceNote).trim()) || 'Admin trừ tiền',
         ref: `admin:${session.userId}`,
       });
     }
