@@ -70,6 +70,7 @@ export default function AdminIbftPage() {
   const [history, setHistory] = useState<IbftHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [historyPageSize, setHistoryPageSize] = useState(10);
   const [historyPage, setHistoryPage] = useState(1);
   const bankOptions = IBFT_BANKS.filter((b) => {
@@ -114,6 +115,12 @@ export default function AdminIbftPage() {
     } finally {
       setLoadingHistory(false);
     }
+  }
+
+  function sleep(ms: number) {
+    return new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
   }
 
   async function submit(e: React.FormEvent) {
@@ -168,7 +175,14 @@ export default function AdminIbftPage() {
         setAccountName('');
         setAmount('');
         setRemark('');
+        setCooldownSeconds(5);
+        for (let i = 5; i > 0; i -= 1) {
+          setCooldownSeconds(i);
+          // eslint-disable-next-line no-await-in-loop
+          await sleep(1000);
+        }
         await loadPendingWithdrawals();
+        setCooldownSeconds(0);
       } else {
         setResult({
           ok: false,
@@ -275,7 +289,7 @@ export default function AdminIbftPage() {
               </p>
             ) : null}
             <Button type="submit" disabled={loading}>
-              Gửi chi hộ
+              {loading && cooldownSeconds > 0 ? `Đang chờ ${cooldownSeconds}s...` : 'Gửi chi hộ'}
             </Button>
             {result ? (
               <div
