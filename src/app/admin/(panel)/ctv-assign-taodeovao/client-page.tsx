@@ -17,6 +17,8 @@ type Row = {
   name: string;
   webLogin: string;
   balance: number;
+  totalTransactionAmount: number;
+  registerAt: number;
   isActive: boolean;
   isBanned: boolean;
   referredByUserId: string;
@@ -34,6 +36,10 @@ export default function ClientPage() {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showUsersModal, setShowUsersModal] = useState(false);
+  const [modalPageSize, setModalPageSize] = useState(10);
+  const [modalPage, setModalPage] = useState(1);
+  const [modalSearch, setModalSearch] = useState('');
 
   async function load(targetUserId?: string) {
     setLoading(true);
@@ -72,6 +78,23 @@ export default function ClientPage() {
   useEffect(() => {
     setPage(1);
   }, [search, pageSize]);
+  useEffect(() => {
+    setModalPage(1);
+  }, [modalPageSize, showUsersModal, items.length]);
+  useEffect(() => {
+    setModalPage(1);
+  }, [modalSearch]);
+  const modalFiltered = useMemo(() => {
+    const q = modalSearch.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((u) =>
+      [u.id, u.webLogin || '', u.name || '', u.referredByUserId || '']
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [items, modalSearch]);
+
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -209,6 +232,157 @@ export default function ClientPage() {
           className="w-full rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
         />
       </div>
+      <div className="mb-3">
+        <button
+          type="button"
+          onClick={() => setShowUsersModal(true)}
+          className="rounded border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Xem user
+        </button>
+      </div>
+
+      {showUsersModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="all-users-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            aria-label="Đóng"
+            onClick={() => setShowUsersModal(false)}
+          />
+          <div className="relative z-10 max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1 shadow-xl">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-200/90 bg-surface-2/80 px-4 py-3">
+              <div>
+                <h2 id="all-users-title" className="font-display text-lg font-semibold text-slate-900">
+                  Toàn bộ danh sách user
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Hiển thị ID, tổng tiền giao dịch, CTV hiện tại và ngày tạo.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUsersModal(false)}
+                className="rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Đóng
+              </button>
+            </div>
+            <div className="max-h-[calc(90vh-8rem)] overflow-y-auto p-4">
+              {(() => {
+                const totalRows = modalFiltered.length;
+                const totalModalPages = Math.max(1, Math.ceil(totalRows / modalPageSize));
+                const safeModalPage = Math.min(Math.max(1, modalPage), totalModalPages);
+                const startModal = (safeModalPage - 1) * modalPageSize;
+                const modalRows = modalFiltered.slice(startModal, startModal + modalPageSize);
+                return (
+                  <>
+                    <div className="mb-3 w-full sm:w-[360px]">
+                      <input
+                        value={modalSearch}
+                        onChange={(e) => setModalSearch(e.target.value)}
+                        placeholder="Tìm trong popup: id / user / login / CTV..."
+                        className="w-full rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                      />
+                    </div>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500">Hiển thị</span>
+                        {[10, 50, 100].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setModalPageSize(n)}
+                            className={`rounded px-2 py-1 ${
+                              modalPageSize === n
+                                ? 'bg-accent text-on-accent'
+                                : 'border border-slate-200 bg-white text-slate-700'
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                        <span className="text-slate-500">/ trang</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <span>
+                          Trang {safeModalPage}/{totalModalPages} · {totalRows} user
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setModalPage((p) => Math.max(1, p - 1))}
+                          disabled={safeModalPage <= 1}
+                          className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                        >
+                          Trước
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setModalPage((p) => Math.min(totalModalPages, p + 1))}
+                          disabled={safeModalPage >= totalModalPages}
+                          className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+                        >
+                          Sau
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto rounded-[var(--radius-app)] border border-slate-200/90">
+                      <table className="w-full min-w-[820px] text-left text-xs text-slate-700">
+                        <thead className="bg-surface-2/80 text-[10px] uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="p-2">ID</th>
+                            <th className="p-2">User</th>
+                            <th className="p-2">Tổng tiền giao dịch</th>
+                            <th className="p-2">CTV hiện tại</th>
+                            <th className="p-2">Ngày tạo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {modalRows.map((u) => (
+                            <tr key={u.id} className="border-t border-slate-100">
+                              <td className="p-2 font-mono text-[11px]">{u.id}</td>
+                              <td className="p-2">
+                                <p className="font-medium text-slate-900">{u.name || '—'}</p>
+                                <p className="text-slate-500">{u.webLogin || '—'}</p>
+                              </td>
+                              <td className="p-2 font-semibold text-emerald-700">
+                                {Number(u.totalTransactionAmount || 0).toLocaleString('vi-VN')} đ
+                              </td>
+                              <td className="p-2 font-mono text-[11px]">
+                                {u.referredByUserId || '—'}
+                                {u.isAssignedToTarget ? (
+                                  <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                    {target?.webLogin || 'target'}
+                                  </span>
+                                ) : null}
+                              </td>
+                              <td className="p-2 whitespace-nowrap text-slate-600">
+                                {u.registerAt ? new Date(u.registerAt).toLocaleString('vi-VN') : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                          {modalRows.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="p-4 text-center text-sm text-slate-500">
+                                Không có user.
+                              </td>
+                            </tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {!loading ? (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">

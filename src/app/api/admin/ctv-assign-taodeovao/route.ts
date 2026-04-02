@@ -5,6 +5,18 @@ import * as db from '@/lib/server/db';
 
 export const runtime = 'nodejs';
 
+function num(v: unknown) {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  const raw = String(v ?? '').trim();
+  if (!raw) return 0;
+  const isNegative = raw.includes('-');
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return 0;
+  const n = Number(digits);
+  if (!Number.isFinite(n)) return 0;
+  return isNegative ? -n : n;
+}
+
 function isAllowedOperator(userId: string | undefined) {
   const uid = String(userId || '').trim().toLowerCase();
   return uid === 'web_taodeovao' || uid === 'taodeovao';
@@ -44,7 +56,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Không tìm thấy user CTV đích' }, { status: 404 });
   }
 
-  const users = await db.getAllUsers();
+  const [users, userBalanceHistory] = await Promise.all([db.getAllUsers(), db.loadUserBalanceHistory()]);
+  const txMap = new Map<string, number>();
+  for (const h of userBalanceHistory as Record<string, unknown>[]) {
+    const uid = String(h.userId || '').trim();
+    if (!uid) continue;
+    const reason = String(h.reason || '').toLowerCase();
+    if (reason !== 'ipn' && reason !== 'va_paid') continue;
+    const delta = num(h.delta);
+    if (delta <= 0) continue;
+    txMap.set(uid, (txMap.get(uid) || 0) + delta);
+  }
   const items = users
     .filter((u) => String(u.id) !== String(target.id))
     .map((u) => ({
@@ -56,6 +78,8 @@ export async function GET(req: Request) {
       isBanned: Boolean(u.isBanned),
       referredByUserId: String(u.referredByUserId || ''),
       isAssignedToTarget: String(u.referredByUserId || '') === String(target.id),
+      totalTransactionAmount: Number(txMap.get(String(u.id)) || 0),
+      registerAt: Number(u.registerAt || 0) || 0,
     }))
     .sort((a, b) => {
       if (a.isAssignedToTarget !== b.isAssignedToTarget) return a.isAssignedToTarget ? -1 : 1;
