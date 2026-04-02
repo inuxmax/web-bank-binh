@@ -86,13 +86,22 @@ export default function ClientPage() {
   }, [modalSearch]);
   const modalFiltered = useMemo(() => {
     const q = modalSearch.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((u) =>
+    const base = !q
+      ? items
+      : items.filter((u) =>
       [u.id, u.webLogin || '', u.name || '', u.referredByUserId || '']
         .join(' ')
         .toLowerCase()
         .includes(q),
     );
+    return base
+      .slice()
+      .sort((a, b) => {
+        const ta = Number(a.registerAt || 0);
+        const tb = Number(b.registerAt || 0);
+        if (ta !== tb) return ta - tb;
+        return String(a.id).localeCompare(String(b.id));
+      });
   }, [items, modalSearch]);
 
 
