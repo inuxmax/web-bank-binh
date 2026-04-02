@@ -56,6 +56,25 @@ export function TelegramConnectCard({ initialLinked }: { initialLinked: boolean 
     }
   }
 
+  async function unlinkTelegram() {
+    const ok = window.confirm('Bạn muốn huỷ liên kết Telegram khỏi tài khoản web này?');
+    if (!ok) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/me/telegram-link', { method: 'DELETE' });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(typeof d.error === 'string' ? d.error : 'Không thể huỷ liên kết Telegram.');
+        return;
+      }
+      setLinked(false);
+      setMessage('Đã huỷ liên kết Telegram.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (linked) {
     return (
       <div className="flex flex-wrap items-center gap-3">
@@ -67,6 +86,14 @@ export function TelegramConnectCard({ initialLinked }: { initialLinked: boolean 
           className="rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
         >
           Kiểm tra lại
+        </button>
+        <button
+          type="button"
+          onClick={() => void unlinkTelegram()}
+          disabled={busy}
+          className="rounded-[var(--radius-app)] border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+        >
+          Huỷ liên kết Telegram
         </button>
         {message ? <p className="w-full text-xs text-slate-500">{message}</p> : null}
       </div>
