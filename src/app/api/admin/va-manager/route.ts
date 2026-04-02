@@ -57,7 +57,10 @@ function buildOwnerMap(rows: Record<string, unknown>[]) {
   return map;
 }
 
-function enrichOwnerFields(items: Record<string, unknown>[], ownerMap: Map<string, { userId: string; username: string }>) {
+function enrichOwnerFields(
+  items: Record<string, unknown>[],
+  ownerMap: Map<string, { userId: string; username: string }>,
+): Record<string, unknown>[] {
   return items.map((item) => {
     const vaAccount = pickString(item, ['vaAccount', 'account', 'accountNo']);
     const localOwner = ownerMap.get(vaAccount);
@@ -120,7 +123,7 @@ export async function GET(req: Request) {
     const localRows = (await db.loadAll()) as unknown as Record<string, unknown>[];
     const ownerMap = buildOwnerMap(localRows);
     const response = await listVirtualAccounts({ size, page });
-    let items = enrichOwnerFields(normalizeVaItems(response.decoded), ownerMap);
+    let items: Record<string, unknown>[] = enrichOwnerFields(normalizeVaItems(response.decoded), ownerMap);
     let source: 'hpay' | 'db_fallback' = 'hpay';
     if (!items.length) {
       items = fallbackItemsFromDb(localRows);
