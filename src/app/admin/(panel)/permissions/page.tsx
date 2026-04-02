@@ -54,6 +54,8 @@ export default function AdminPermissionsPage() {
   const [loading, setLoading] = useState(true);
   const [savingUserId, setSavingUserId] = useState('');
   const [q, setQ] = useState('');
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
 
   async function load() {
     setLoading(true);
@@ -67,6 +69,10 @@ export default function AdminPermissionsPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [q, pageSize]);
 
   async function saveUser(userId: string, perms: string[]) {
     setSavingUserId(userId);
@@ -109,6 +115,12 @@ export default function AdminPermissionsPage() {
     return items.filter((u) => `${u.id} ${u.name} ${u.webLogin}`.toLowerCase().includes(key));
   }, [items, q]);
 
+  const totalUsers = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const paged = filtered.slice(pageStart, pageStart + pageSize);
+
   return (
     <div>
       <popup.PopupHost />
@@ -118,27 +130,70 @@ export default function AdminPermissionsPage() {
         description="Cấp quyền truy cập các module admin cho user. Có quyền nào mới thấy và dùng được mục đó."
       />
 
-      <div className="mb-4 max-w-sm">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="w-full rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2 text-sm"
-          placeholder="Tìm user..."
-        />
+      <div className="mb-4 rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1/95 p-3 shadow-inner-glow">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-slate-500">Hiển thị</span>
+            {[10, 50, 100].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setPageSize(n)}
+                className={`rounded-[var(--radius-app)] px-2.5 py-1 text-xs font-medium ${
+                  pageSize === n
+                    ? 'bg-accent text-on-accent'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+            <span className="text-slate-500">/ trang</span>
+          </div>
+          <div className="w-full sm:w-[320px]">
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="w-full rounded-[var(--radius-app)] border border-slate-200 bg-white px-3 py-2 text-sm"
+              placeholder="Tìm user..."
+            />
+          </div>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span>
+              Trang {safePage}/{totalPages} · {totalUsers} user
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+            >
+              Trước
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700 disabled:opacity-50"
+            >
+              Sau
+            </button>
+          </div>
+        </div>
       </div>
 
       {loading ? (
         <p className="text-sm text-slate-500">Đang tải…</p>
       ) : (
         <div className="space-y-3">
-          {filtered.map((u) => (
+          {paged.map((u) => (
             <div
               key={u.id}
-              className="rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1/95 p-4 shadow-inner-glow"
+              className="rounded-[var(--radius-app-lg)] border border-slate-200/90 bg-surface-1/95 p-4 shadow-inner-glow transition hover:shadow-md"
             >
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{u.name}</p>
+                  <p className="text-sm font-semibold text-slate-900">{u.name || u.id}</p>
                   <p className="text-xs text-slate-500">
                     {u.id} · {u.webLogin || '—'} · {u.isActive ? 'Đã duyệt' : 'Chưa duyệt'}
                   </p>

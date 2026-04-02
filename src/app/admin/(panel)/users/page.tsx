@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
   const [withdrawFeeInput, setWithdrawFeeInput] = useState('');
   const [feeSaving, setFeeSaving] = useState(false);
   const [search, setSearch] = useState('');
-  const [quickFilter, setQuickFilter] = useState<'all' | 'active' | 'banned'>('all');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'active' | 'inactive' | 'banned'>('all');
 
   async function load() {
     const res = await fetch('/api/admin/users');
@@ -284,6 +284,7 @@ export default function AdminUsersPage() {
   const keyword = search.trim().toLowerCase();
   const filteredUsers = users.filter((u) => {
     if (quickFilter === 'active' && !u.isActive) return false;
+    if (quickFilter === 'inactive' && u.isActive) return false;
     if (quickFilter === 'banned' && !u.isBanned) return false;
     if (!keyword) return true;
     const fields = [
@@ -652,6 +653,7 @@ export default function AdminUsersPage() {
           {[
             { key: 'all', label: 'Tất cả' },
             { key: 'active', label: 'Active' },
+            { key: 'inactive', label: 'Chưa kích hoạt' },
             { key: 'banned', label: 'Bị khóa' },
           ].map((opt) => (
             <button

@@ -213,16 +213,39 @@ export default function AdminIbftPage() {
     setRemark(`Chi ho rut ${String(w.id || '').trim()}`.trim());
   }
 
+  const selectedKey = String(selectedWithdrawal?.id || selectedWithdrawal?.mongoId || '');
+  const pendingCount = withdrawals.length;
+  const pendingVerified = withdrawals.filter((x) => Boolean(x.isVerified)).length;
+
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         eyebrow="Sinpay API"
         title="Chi hộ IBFT"
         description="Firm transfer môi trường thật. Nhập trực tiếp thông tin người nhận và chọn kênh nguồn theo cấu hình thật."
       />
 
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card className="border-emerald-200/80 bg-emerald-50/60" padding="sm">
+          <p className="text-xs text-emerald-700">Yêu cầu đang chờ</p>
+          <p className="text-xl font-semibold text-emerald-800">{pendingCount}</p>
+        </Card>
+        <Card className="border-rose-200/80 bg-rose-50/60" padding="sm">
+          <p className="text-xs text-rose-700">User verify đang chờ</p>
+          <p className="text-xl font-semibold text-rose-800">{pendingVerified}</p>
+        </Card>
+        <Card className="border-sky-200/80 bg-sky-50/60" padding="sm">
+          <p className="text-xs text-sky-700">Đang chọn</p>
+          <p className="truncate font-mono text-sm font-semibold text-sky-800">{selectedKey || 'Chưa chọn'}</p>
+        </Card>
+      </div>
+
       <div className="grid gap-8 lg:grid-cols-2">
-        <Card padding="lg">
+        <Card padding="lg" className="border-slate-200/90 bg-surface-1">
+          <div className="mb-4">
+            <h2 className="font-display text-lg font-semibold text-slate-900">Form chi hộ</h2>
+            <p className="mt-1 text-xs text-slate-500">Chọn một yêu cầu bên phải để tự điền nhanh thông tin chuyển khoản.</p>
+          </div>
           <form onSubmit={submit} className="space-y-5">
             <div>
               <FieldLabel>Kênh nguồn (tùy chọn)</FieldLabel>
@@ -260,22 +283,24 @@ export default function AdminIbftPage() {
                 </select>
               </div>
             </div>
-            <div>
-              <FieldLabel>Số tài khoản</FieldLabel>
-              <input
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                className={fieldInputClass}
-                required
-              />
-            </div>
-            <div>
-              <FieldLabel>Tên chủ TK</FieldLabel>
-              <input value={accountName} onChange={(e) => setAccountName(e.target.value)} className={fieldInputClass} required />
-            </div>
-            <div>
-              <FieldLabel>Số tiền</FieldLabel>
-              <input value={amount} onChange={(e) => setAmount(e.target.value)} className={fieldInputClass} required />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <FieldLabel>Số tài khoản</FieldLabel>
+                <input
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  className={fieldInputClass}
+                  required
+                />
+              </div>
+              <div>
+                <FieldLabel>Tên chủ TK</FieldLabel>
+                <input value={accountName} onChange={(e) => setAccountName(e.target.value)} className={fieldInputClass} required />
+              </div>
+              <div>
+                <FieldLabel>Số tiền</FieldLabel>
+                <input value={amount} onChange={(e) => setAmount(e.target.value)} className={fieldInputClass} required />
+              </div>
             </div>
             <div>
               <FieldLabel>Ghi chú</FieldLabel>
@@ -288,7 +313,7 @@ export default function AdminIbftPage() {
                 thành công sẽ tự duyệt.
               </p>
             ) : null}
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading && cooldownSeconds > 0 ? `Đang chờ ${cooldownSeconds}s...` : 'Gửi chi hộ'}
             </Button>
             {result ? (
@@ -306,7 +331,7 @@ export default function AdminIbftPage() {
           </form>
         </Card>
 
-        <Card padding="lg" variant="quiet">
+        <Card padding="lg" variant="quiet" className="border-slate-200/90">
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-display text-lg font-semibold tracking-tight text-slate-900">Danh sách yêu cầu rút tiền</h2>
@@ -315,9 +340,9 @@ export default function AdminIbftPage() {
               </Button>
             </div>
             <p className="text-sm text-slate-500">Bấm chọn một yêu cầu để tự điền thông tin sang form chi hộ.</p>
-            <div className="max-h-[540px] space-y-3 overflow-auto pr-1">
+            <div className="grid max-h-[540px] gap-3 overflow-auto pr-1 lg:grid-cols-2">
               {withdrawals.length === 0 ? (
-                <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 lg:col-span-2">
                   {loadingWithdrawals ? 'Đang tải danh sách...' : 'Không có yêu cầu rút đang chờ.'}
                 </p>
               ) : (
@@ -327,14 +352,18 @@ export default function AdminIbftPage() {
                     type="button"
                     onClick={() => pickWithdrawal(w)}
                     className={`relative w-full rounded-2xl border bg-gradient-to-br px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-                      String(selectedWithdrawal?.id || selectedWithdrawal?.mongoId || '') ===
-                      String(w.id || w.mongoId || '')
+                      selectedKey === String(w.id || w.mongoId || '')
                         ? 'border-emerald-300 from-emerald-50 via-white to-sky-50 ring-2 ring-emerald-200/70'
                         : w.isVerified
                           ? 'border-rose-200 from-rose-50/60 via-white to-rose-50/30 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]'
                           : 'border-sky-100 from-white via-sky-50/40 to-emerald-50/30 hover:border-accent/40'
                     }`}
                   >
+                    <span
+                      className={`absolute left-0 top-0 h-full w-1.5 rounded-l-2xl ${
+                        w.isVerified ? 'bg-rose-400/80' : 'bg-sky-400/70'
+                      }`}
+                    />
                     {w.isVerified ? (
                       <svg
                         aria-hidden
