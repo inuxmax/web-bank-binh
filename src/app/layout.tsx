@@ -3,6 +3,7 @@ import { GeistMono } from 'geist/font/mono';
 import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { ThemeModeFab } from '@/components/ThemeModeFab';
+import { MouseGlowEffect } from '@/components/MouseGlowEffect';
 
 const sans = GeistSans;
 const mono = GeistMono;
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen font-sans" suppressHydrationWarning>
+        <MouseGlowEffect />
         {children}
         <ThemeModeFab />
       </body>
