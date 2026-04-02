@@ -51,6 +51,9 @@ async function runBackupIfDue() {
   const snapshot = await createMongoBackupToProject();
   await cleanupMongoBackups(keepFiles);
   await db.updateConfig({ mongoBackupLastRunAt: Date.now() });
+  console.info(
+    `[MONGO_BACKUP_POLLER] auto backup created: ${snapshot.fileName} (interval=${intervalMinutes}m, keep=${keepFiles})`,
+  );
   const status = getStatusStore();
   status.lastFileName = snapshot.fileName;
 }
@@ -59,6 +62,7 @@ export function startMongoBackupPoller() {
   const g = globalThis as typeof globalThis & { [POLLER_KEY]?: boolean };
   if (g[POLLER_KEY]) return;
   g[POLLER_KEY] = true;
+  console.info('[MONGO_BACKUP_POLLER] started');
 
   let running = false;
   const status = getStatusStore();

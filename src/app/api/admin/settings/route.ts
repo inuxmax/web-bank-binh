@@ -64,6 +64,14 @@ export async function PATCH(req: Request) {
       mongoBackupIntervalMinutes: data.mongoBackupIntervalMinutes,
       mongoBackupKeepFiles: data.mongoBackupKeepFiles,
     });
+    if (data.mongoBackupAutoEnabled) {
+      try {
+        const { startMongoBackupPoller } = await import('@/lib/server/mongo-backup-poller');
+        startMongoBackupPoller();
+      } catch (e) {
+        console.error('[admin settings] startMongoBackupPoller:', e);
+      }
+    }
     return NextResponse.json({ ok: true, config });
   } catch (e) {
     if (e instanceof z.ZodError) {
